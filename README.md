@@ -5,8 +5,7 @@
 <p></p>
 
 Utilities for control flow mechanisms suitable for [Clojure](https://clojure.org/), [ClojureScript](https://clojurescript.org/), and
-[Babashka](https://babashka.org/) with an emphasis on keeping code more linear (rather than sliding to the right margin), particularly
-during consecutive data validation steps.
+[Babashka](https://babashka.org/).
 
 # Contents
 1. [Motivation](#motivation)
@@ -18,7 +17,8 @@ during consecutive data validation steps.
 
 # Motivation
 
-The *clojure-control-flow* library provides functions for managing control flow.
+The *clojure-control-flow* library provides functions for managing control flow with an emphasis on keeping code more 
+linear (rather than sliding to the right margin), particularly during consecutive data validation steps.
 
 
 # Installation
