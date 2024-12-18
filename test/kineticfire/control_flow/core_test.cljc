@@ -18,7 +18,20 @@
 
 
 (ns kineticfire.control-flow.core-test
-  (:require [clojure.test                :refer :all]))
+  (:require [clojure.test                  :refer :all]
+            [kineticfire.control-flow.core :as cf]))
+
+
+(deftest experiment-test
+  (testing "testing"
+    (let [v (cf/stop-> {:z 26} #(do
+                                  (println "stop fn: " %)
+                                  false)
+                       (assoc :a 1)
+                       (assoc :b 2)
+                       )]
+      (println "RESULT: " v))))
+
 
 
 ;
