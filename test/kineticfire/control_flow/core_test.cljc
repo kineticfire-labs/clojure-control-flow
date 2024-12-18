@@ -22,40 +22,63 @@
             [kineticfire.control-flow.core :as cf]))
 
 
-(deftest experiment-test
-  (testing "testing"
-    (let [v (cf/stop-> {:z 26} #(do
-                                  (println "stop fn: " %)
+
+(deftest stop->test
+  ;(testing "stop->: no forms"
+  ;  (let [v (cf/stop-> {:z 26} #(if (contains? % :w)
+  ;                                true
+  ;                                false))]
+  ;    (is (map? v))
+  ;    (is (= v {:z 26}))))
+  ;(testing "stop->: one form, no stop"
+  ;  (let [v (cf/stop-> {:z 26} #(if (contains? % :w)
+  ;                                true
+  ;                                false)
+  ;                     (assoc :a 1))]
+  ;    (is (map? v))
+  ;    (is (= v {:z 26 :a 1}))))
+  ;(testing "stop->: three forms, no stop"
+  ;  (let [v (cf/stop-> {:z 26} #(if (contains? % :w)
+  ;                                true
+  ;                                false)
+  ;                     (assoc :a 1)
+  ;                     (assoc :b 2)
+  ;                     (assoc :c 3))]
+  ;    (is (map? v))
+  ;    (is (= v {:z 26 :a 1 :b 2 :c 3}))))
+  ;(testing "stop->: five forms, stop after 1st"
+  ;  (let [v (cf/stop-> {:z 26} #(if (contains? % :a)
+  ;                                true
+  ;                                false)
+  ;                     (assoc :a 1)
+  ;                     (assoc :b 2)
+  ;                     (assoc :c 3)
+  ;                     (assoc :d 4)
+  ;                     (assoc :e 5))]
+  ;    (is (map? v))
+  ;    (is (= v {:z 26 :a 1}))))
+  (testing "stop->: five forms, stop after 2nd"
+    (let [v (cf/stop-> {:z 26} #(if (contains? % :b)
+                                  true
                                   false)
                        (assoc :a 1)
                        (assoc :b 2)
-                       )]
-      (println "RESULT: " v))))
+                       (assoc :c 3)
+                       (assoc :d 4)
+                       (assoc :e 5))]
+      (is (map? v))
+      (is (= v {:z 26 :a 1 :b 2}))))
+  ;(testing "stop->: five forms, stop after 3rd"
+  ;  (let [v (cf/stop-> {:z 26} #(if (contains? % :c)
+  ;                                true
+  ;                                false)
+  ;                     (assoc :a 1)
+  ;                     (assoc :b 2)
+  ;                     (assoc :c 3)
+  ;                     (assoc :d 4)
+  ;                     (assoc :e 5))]
+  ;    (is (map? v))
+  ;    (is (= v {:z 26 :a 1 :b 2 :c 3}))))
 
+  )
 
-
-;
-;(defn perform-symmetric-difference-of-sets-test
-;  [set1 set2 expected]
-;  (let [v (kf-set/symmetric-difference set1 set2)]
-;    (is (set? v))
-;    (is (= v expected))))
-;
-;
-;(deftest symmetric-difference-of-sets-test
-;  (testing "empty sets"
-;    (perform-symmetric-difference-of-sets-test #{} #{} #{}))
-;  (testing "set1 empty, set2 not empty"
-;    (perform-symmetric-difference-of-sets-test #{1} #{} #{1}))
-;  (testing "set1 not empty, set2 empty"
-;    (perform-symmetric-difference-of-sets-test #{} #{1} #{1}))
-;  (testing "no diff, 1 element"
-;    (perform-symmetric-difference-of-sets-test #{1} #{1} #{}))
-;  (testing "no diff, multiple elements"
-;    (perform-symmetric-difference-of-sets-test #{1 3 5 7} #{7 1 5 3} #{}))
-;  (testing "diff, 1 element each"
-;    (perform-symmetric-difference-of-sets-test #{1} #{2} #{1 2}))
-;  (testing "diff, 2 elements each"
-;    (perform-symmetric-difference-of-sets-test #{1 2} #{3 4} #{1 2 3 4}))
-;  (testing "diff, 2 elements each with 2 in common"
-;    (perform-symmetric-difference-of-sets-test #{1 7 2 8} #{8 3 4 7} #{1 2 3 4})))
