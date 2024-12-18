@@ -32,9 +32,9 @@
   (if forms
     (let [original-val x]
       (loop [threaded nil
+             first-iteration true
              form-result (gensym)
              forms forms]
-        (println "\n\nLOOP----")
         (if forms
           (let [form (last forms)
                 remaining-forms (butlast forms)
@@ -47,17 +47,52 @@
                                    threaded-form (if (seq? form)
                                                    (with-meta `(~(first form) ~prev-form-result ~@(next form)) (meta form))
                                                    (list form prev-form-result))]
-                               (if (seq? remaining-forms)
-                                 `(let [~form-result ~threaded-form] ;; todo: don't add 'if' if last expression
-                                    (if (~stop-fn ~form-result)
-                                      ~form-result
-                                      ~return-for-ok))
+                               (if first-iteration
+                                 `(let [~form-result ~threaded-form]
+                                    ~return-for-ok)
                                  `(let [~form-result ~threaded-form]
                                     (if (~stop-fn ~form-result)
                                       ~form-result
                                       ~return-for-ok))))]
-            (println "threaded-let: " threaded-let)
-            (recur threaded-let prev-form-result remaining-forms))
+            (recur threaded-let false prev-form-result remaining-forms))
+          threaded)))
+    x))
+
+
+(defmacro stop->>
+  "Threads the expression `x` through the forms `forms`. Inserts `x` as the last item in the first form, making a list
+  of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
+  then evaluates the `stop-fn`, which takes exactly one argument:  the output from the evaluation of the current form.
+  If the `stop-fn` returns 'true', then returns the current result (and stops evaluating the forms) else if 'false'
+  then continues evaluating the forms by inserting the first form as the last item in second form, and so on until no
+  forms remain.  The `stop-fn` is not called on the result from the evaluation of the last form."
+  [x stop-fn & forms]
+  (if forms
+    (let [original-val x]
+      (loop [threaded nil
+             first-iteration true
+             form-result (gensym)
+             forms forms]
+        (if forms
+          (let [form (last forms)
+                remaining-forms (butlast forms)
+                prev-form-result (if (seq? remaining-forms)
+                                   (gensym)
+                                   original-val)
+                threaded-let (let [return-for-ok (if threaded
+                                                   threaded
+                                                   form-result)
+                                   threaded-form (if (seq? form)
+                                                   (with-meta `(~(first form) ~@(next form) ~prev-form-result) (meta form))
+                                                   (list form prev-form-result))]
+                               (if first-iteration
+                                 `(let [~form-result ~threaded-form]
+                                    ~return-for-ok)
+                                 `(let [~form-result ~threaded-form]
+                                    (if (~stop-fn ~form-result)
+                                      ~form-result
+                                      ~return-for-ok))))]
+            (recur threaded-let false prev-form-result remaining-forms))
           threaded)))
     x))
 
@@ -102,25 +137,5 @@
 ;            (recur threaded-let prev-form-result remaining-forms))
 ;          threaded)))
 ;    x))
-
-
-
-
-
-
-;;; todo
-;(defmacro stop->>)
-;
-;;; todo
-;(defmacro as-stop->)
-;
-;;; todo
-;(defmacro cont->)
-;
-;;; todo
-;(defmacro cont->>)
-;
-;;; todo
-;(defmacro as-cont->)
 
 
