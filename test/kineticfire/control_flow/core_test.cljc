@@ -182,3 +182,26 @@
                         (str "s"))]
       (is (string? v))
       (is (= v "stuvwxyz")))))
+
+
+
+(deftest stop-mod->test
+  ;(testing "stop-mod->: no forms"
+  ;  (let [v (cf/stop-mod-> {:z 26} #(do
+  ;                                    (println "stop-mod-fn: checking")
+  ;                                    {:stop false :data %}))]
+  ;    (println "RESULT: " v)))
+  ;(testing "stop-mod->: one form, no stop"
+  ;  (let [v (cf/stop-mod-> {:z 26} #(do
+  ;                                    (println "stop-mod-fn: checking")
+  ;                                    {:stop false :data %})
+  ;                         (assoc :a 1))]
+  ;    (println "RESULT: " v)))
+  (testing "stop-mod->: two forms, no stop"
+    (let [v (cf/stop-mod-> {:z 26} #(do
+                                      (println "stop-mod-fn: checking")
+                                      {:stop false :data %})
+                           (assoc :a 1)
+                           (assoc :b 1))]
+      (println "RESULT: " v)))
+  )

@@ -97,6 +97,49 @@
     x))
 
 
+(defmacro stop-mod->
+  "Threads the expression `x` through the forms `forms`. Inserts `x` as the second item in the first form, making a list
+  of it if it is not a list already.  Passes the result the `stop-mod-fn`, which takes exactly one argument:  the output
+  from the evaluation of the current form.  The `stop-mod-fn` must return a map with key ':result' set to the data,
+  either modified or not, and key ':stop' to 'true' to not pass the result to next from and return the result else
+  'false' to continue and pass the item ':data' as the input to the next form.  And so on until there are no more forms.
+  The `stop-mod-fn` is always called on the result from the evaluation of the last form."
+  [x stop-mod-fn & forms]
+  (if forms
+    (let [original-val x]
+      (loop [threaded nil
+             stop-mod-fn-result (gensym)
+             forms forms]
+        (println "\n\nLOOP------------------")
+        (if forms
+          (let [form (last forms)
+                remaining-forms (butlast forms)
+                prev-stop-mod-fn-result (if (seq? remaining-forms)
+                                          (gensym)
+                                          original-val)
+                sub (if (seq? remaining-forms)              ;; todo! check output, re-enable other tests.
+                      `(~:data ~prev-stop-mod-fn-result)
+                      prev-stop-mod-fn-result)
+                threaded-let (let [return-for-ok (if threaded
+                                                   threaded
+                                                   `(~:data ~stop-mod-fn-result))
+                                   threaded-form (if (seq? form)
+                                                   (with-meta `(~(first form) ~sub ~@(next form)) (meta form))
+                                                   (list form prev-stop-mod-fn-result))
+                                   form-result (gensym)]
+                               `(let [~form-result ~threaded-form
+                                      ~stop-mod-fn-result (~stop-mod-fn ~form-result)]
+                                  (if (~:stop ~stop-mod-fn-result)
+                                    (~:data ~stop-mod-fn-result)
+                                    ~return-for-ok)))]
+            (println "threaded let: " threaded-let)
+            (recur threaded-let prev-stop-mod-fn-result remaining-forms))
+          threaded)))
+    (do
+      (println "EXIT")
+      x)))
+
+
 ;; todo: for REFERENCE
   ;; (~stop-fn ~next-val)
 ;(defmacro stop->
