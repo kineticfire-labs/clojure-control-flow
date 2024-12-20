@@ -38,6 +38,14 @@
                        (assoc :a 1))]
       (is (map? v))
       (is (= v {:z 26 :a 1}))))
+  (testing "stop->: two forms, no stop"
+    (let [v (cf/stop-> {:z 26} #(if (contains? % :w)
+                                  true
+                                  false)
+                       (assoc :a 1)
+                       (assoc :b 2))]
+      (is (map? v))
+      (is (= v {:z 26 :a 1 :b 2}))))
   (testing "stop->: three forms, no stop"
     (let [v (cf/stop-> {:z 26} #(if (contains? % :w)
                                   true
@@ -118,6 +126,14 @@
                         (str "w"))]
       (is (string? v))
       (is (= v "wxyz"))))
+  (testing "stop->>: two forms, no stop"
+    (let [v (cf/stop->> "xyz" #(if (str/includes? % "a")
+                                 true
+                                 false)
+                        (str "w")
+                        (str "v"))]
+      (is (string? v))
+      (is (= v "vwxyz"))))
   (testing "stop->>: three forms, no stop"
     (let [v (cf/stop->> "xyz" #(if (str/includes? % "a")
                                  true
@@ -171,7 +187,7 @@
                         (str "s"))]
       (is (string? v))
       (is (= v "tuvwxyz"))))
-  (testing "stop->>: five forms, stop naturally where the 5th condition would have also stopped it"
+  (testing "stop->>: five forms, stop naturally where the 5th (last) condition would have also stopped it"
     (let [v (cf/stop->> "xyz" #(if (str/includes? % "s")
                                  true
                                  false)
@@ -186,22 +202,176 @@
 
 
 (deftest stop-mod->test
-  ;(testing "stop-mod->: no forms"
-  ;  (let [v (cf/stop-mod-> {:z 26} #(do
-  ;                                    (println "stop-mod-fn: checking")
-  ;                                    {:stop false :data %}))]
-  ;    (println "RESULT: " v)))
-  ;(testing "stop-mod->: one form, no stop"
-  ;  (let [v (cf/stop-mod-> {:z 26} #(do
-  ;                                    (println "stop-mod-fn: checking")
-  ;                                    {:stop false :data %})
-  ;                         (assoc :a 1))]
-  ;    (println "RESULT: " v)))
+  (testing "stop-mod->: no forms"
+    (let [v (cf/stop-mod-> {:z 26} #(if (contains? % :w)
+                                      {:stop true :data %}
+                                      {:stop false :data %}))]
+      (is (map? v))
+      (is (= v {:z 26}))))
+  (testing "stop-mod->: one form, no stop"
+    (let [v (cf/stop-mod-> {:z 26} #(if (contains? % :w)
+                                      {:stop true :data %}
+                                      {:stop false :data %})
+                           (assoc :a 1))]
+      (is (map? v))
+      (is (= v {:z 26 :a 1}))))
   (testing "stop-mod->: two forms, no stop"
-    (let [v (cf/stop-mod-> {:z 26} #(do
-                                      (println "stop-mod-fn: checking")
+    (let [v (cf/stop-mod-> {:z 26} #(if (contains? % :w)
+                                      {:stop true :data %}
                                       {:stop false :data %})
                            (assoc :a 1)
-                           (assoc :b 1))]
-      (println "RESULT: " v)))
-  )
+                           (assoc :b 2))]
+      (is (map? v))
+      (is (= v {:z 26 :a 1 :b 2}))))
+  (testing "stop-mod->: three forms, no stop"
+    (let [v (cf/stop-mod-> {:z 26} #(if (contains? % :w)
+                                      {:stop true :data %}
+                                      {:stop false :data %})
+                           (assoc :a 1)
+                           (assoc :b 2)
+                           (assoc :c 3))]
+      (is (map? v))
+      (is (= v {:z 26 :a 1 :b 2 :c 3}))))
+  (testing "stop-mod->: five forms, stop after 1st"
+    (let [v (cf/stop-mod-> {:z 26} #(if (contains? % :a)
+                                      {:stop true :data %}
+                                      {:stop false :data %})
+                           (assoc :a 1)
+                           (assoc :b 2)
+                           (assoc :c 3)
+                           (assoc :d 4)
+                           (assoc :e 5))]
+      (is (map? v))
+      (is (= v {:z 26 :a 1}))))
+  (testing "stop-mod->: five forms, stop after 2nd"
+    (let [v (cf/stop-mod-> {:z 26} #(if (contains? % :b)
+                                      {:stop true :data %}
+                                      {:stop false :data %})
+                           (assoc :a 1)
+                           (assoc :b 2)
+                           (assoc :c 3)
+                           (assoc :d 4)
+                           (assoc :e 5))]
+      (is (map? v))
+      (is (= v {:z 26 :a 1 :b 2}))))
+  (testing "stop-mod->: five forms, stop after 3rd"
+    (let [v (cf/stop-mod-> {:z 26} #(if (contains? % :c)
+                                      {:stop true :data %}
+                                      {:stop false :data %})
+                           (assoc :a 1)
+                           (assoc :b 2)
+                           (assoc :c 3)
+                           (assoc :d 4)
+                           (assoc :e 5))]
+      (is (map? v))
+      (is (= v {:z 26 :a 1 :b 2 :c 3}))))
+  (testing "stop-mod->: five forms, stop after 4th"
+    (let [v (cf/stop-mod-> {:z 26} #(if (contains? % :d)
+                                      {:stop true :data %}
+                                      {:stop false :data %})
+                           (assoc :a 1)
+                           (assoc :b 2)
+                           (assoc :c 3)
+                           (assoc :d 4)
+                           (assoc :e 5))]
+      (is (map? v))
+      (is (= v {:z 26 :a 1 :b 2 :c 3 :d 4}))))
+  (testing "stop-mod->: five forms, stop after 5th (last)"
+    (let [v (cf/stop-mod-> {:z 26} #(if (contains? % :e)
+                                      {:stop true :data %}
+                                      {:stop false :data %})
+                           (assoc :a 1)
+                           (assoc :b 2)
+                           (assoc :c 3)
+                           (assoc :d 4)
+                           (assoc :e 5))]
+      (is (map? v))
+      (is (= v {:z 26 :a 1 :b 2 :c 3 :d 4 :e 5})))))
+
+
+(deftest stop-mod->>-test
+  (testing "stop-mod->>: no forms"
+    (let [v (cf/stop-mod->> "xyz" #(if (str/includes? % "a")
+                                     {:stop true :data %}
+                                     {:stop false :data %}))]
+      (is (string? v))
+      (is (= v "xyz"))))
+  (testing "stop-mod->>: one form, no stop"
+    (let [v (cf/stop-mod->> "xyz" #(if (str/includes? % "a")
+                                     {:stop true :data %}
+                                     {:stop false :data %})
+                            (str "w"))]
+      (is (string? v))
+      (is (= v "wxyz"))))
+  (testing "stop-mod->>: two forms, no stop"
+    (let [v (cf/stop-mod->> "xyz" #(if (str/includes? % "a")
+                                     {:stop true :data %}
+                                     {:stop false :data %})
+                            (str "w")
+                            (str "v"))]
+      (is (string? v))
+      (is (= v "vwxyz"))))
+  (testing "stop-mod->>: three forms, no stop"
+    (let [v (cf/stop-mod->> "xyz" #(if (str/includes? % "a")
+                                     {:stop true :data %}
+                                     {:stop false :data %})
+                            (str "w")
+                            (str "v")
+                            (str "u"))]
+      (is (string? v))
+      (is (= v "uvwxyz"))))
+  (testing "stop-mod>>: five forms, stop after 1st"
+    (let [v (cf/stop-mod->> "xyz" #(if (str/includes? % "w")
+                                     {:stop true :data %}
+                                     {:stop false :data %})
+                        (str "w")
+                        (str "v")
+                        (str "u")
+                        (str "t")
+                        (str "s"))]
+      (is (string? v))
+      (is (= v "wxyz"))))
+  (testing "stop-mod>>: five forms, stop after 2nd"
+    (let [v (cf/stop-mod->> "xyz" #(if (str/includes? % "v")
+                                     {:stop true :data %}
+                                     {:stop false :data %})
+                            (str "w")
+                            (str "v")
+                            (str "u")
+                            (str "t")
+                            (str "s"))]
+      (is (string? v))
+      (is (= v "vwxyz"))))
+  (testing "stop-mod>>: five forms, stop after 3rd"
+    (let [v (cf/stop-mod->> "xyz" #(if (str/includes? % "u")
+                                     {:stop true :data %}
+                                     {:stop false :data %})
+                            (str "w")
+                            (str "v")
+                            (str "u")
+                            (str "t")
+                            (str "s"))]
+      (is (string? v))
+      (is (= v "uvwxyz"))))
+  (testing "stop-mod>>: five forms, stop after 4th"
+    (let [v (cf/stop-mod->> "xyz" #(if (str/includes? % "t")
+                                     {:stop true :data %}
+                                     {:stop false :data %})
+                            (str "w")
+                            (str "v")
+                            (str "u")
+                            (str "t")
+                            (str "s"))]
+      (is (string? v))
+      (is (= v "tuvwxyz"))))
+  (testing "stop-mod>>: five forms, stop after 5th (and last)"
+    (let [v (cf/stop-mod->> "xyz" #(if (str/includes? % "s")
+                                     {:stop true :data %}
+                                     {:stop false :data %})
+                            (str "w")
+                            (str "v")
+                            (str "u")
+                            (str "t")
+                            (str "s"))]
+      (is (string? v))
+      (is (= v "stuvwxyz")))))

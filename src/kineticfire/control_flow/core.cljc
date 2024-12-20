@@ -14,7 +14,7 @@
 
 
 ;; KineticFire Labs: https://labs.kineticfire.com/
-;;	   Project site:  https://github.com/kineticfire-labs/clojure-control-flow/
+;;	   Project site: https://github.com/kineticfire-labs/clojure-control-flow/
 
 
 (ns kineticfire.control-flow.core
@@ -99,25 +99,24 @@
 
 (defmacro stop-mod->
   "Threads the expression `x` through the forms `forms`. Inserts `x` as the second item in the first form, making a list
-  of it if it is not a list already.  Passes the result the `stop-mod-fn`, which takes exactly one argument:  the output
-  from the evaluation of the current form.  The `stop-mod-fn` must return a map with key ':result' set to the data,
-  either modified or not, and key ':stop' to 'true' to not pass the result to next from and return the result else
-  'false' to continue and pass the item ':data' as the input to the next form.  And so on until there are no more forms.
-  The `stop-mod-fn` is always called on the result from the evaluation of the last form."
+  of it if it is not a list already.  Passes the result of the `stop-mod-fn`, which takes exactly one argument:  the
+  output from the evaluation of the current form.  The `stop-mod-fn` must return a map with key ':result' set to the
+  data, either modified or not, and key ':stop' to 'true' to not pass the result to next from and return the result else
+  'false' to continue and pass the item ':data' as the second item as input to the next form.  And so on until there
+  are no more forms. The `stop-mod-fn` is always called on the result from the evaluation of the last form."
   [x stop-mod-fn & forms]
   (if forms
     (let [original-val x]
       (loop [threaded nil
              stop-mod-fn-result (gensym)
              forms forms]
-        (println "\n\nLOOP------------------")
         (if forms
           (let [form (last forms)
                 remaining-forms (butlast forms)
                 prev-stop-mod-fn-result (if (seq? remaining-forms)
                                           (gensym)
                                           original-val)
-                sub (if (seq? remaining-forms)              ;; todo! check output, re-enable other tests.
+                sub (if (seq? remaining-forms)
                       `(~:data ~prev-stop-mod-fn-result)
                       prev-stop-mod-fn-result)
                 threaded-let (let [return-for-ok (if threaded
@@ -132,53 +131,48 @@
                                   (if (~:stop ~stop-mod-fn-result)
                                     (~:data ~stop-mod-fn-result)
                                     ~return-for-ok)))]
-            (println "threaded let: " threaded-let)
             (recur threaded-let prev-stop-mod-fn-result remaining-forms))
           threaded)))
-    (do
-      (println "EXIT")
-      x)))
+    x))
 
 
-;; todo: for REFERENCE
-  ;; (~stop-fn ~next-val)
-;(defmacro stop->
-;  "Threads the expression `x` through the forms `forms`. Inserts `x` as the second item in the first form, making a list
-;  of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
-;  then evaluates the `stop-fn`: if 'true', then returns the current result else inserts the first form as the second
-;  item in second form, and so on until no forms remain."
-;  [x stop-fn & forms]
-;
-;  (if forms
-;    (let [original-val x]
-;      (loop [threaded nil
-;             form-result (gensym)
-;             forms forms]
-;        (println "LOOP ---------")
-;        (if forms
-;          (let [form (last forms)
-;                remaining-forms (butlast forms)
-;                prev-form-result (if (= (count forms) 1)
-;                                   original-val
-;                                   (gensym))
-;                prev-form-result (if (seq? remaining-forms)
-;                                   prev-form-result
-;                                   original-val)
-;                threaded-let (let [return-for-ok (if threaded
-;                                                   threaded
-;                                                   form-result)
-;                                   threaded-form (if (seq? form)
-;                                                   (with-meta `(~(first form) ~prev-form-result ~@(next form)) (meta form))
-;                                                   (list form prev-form-result))]
-;                               `(let [~form-result ~threaded-form]
-;                                  (if false
-;                                    ~form-result
-;                                    ~return-for-ok)))]
-;            (println "threaded-let: " threaded-let)
-;            (println "prev-form-result: " prev-form-result)
-;            (println "form-result: " form-result)
-;            (recur threaded-let prev-form-result remaining-forms))
-;          threaded)))
-;    x))
+(defmacro stop-mod->>
+  "Threads the expression `x` through the forms `forms`. Inserts `x` as the last item in the first form, making a list
+  of it if it is not a list already.  Passes the result to the `stop-mod-fn`, which takes exactly one argument:  the output
+  from the evaluation of the current form.  The `stop-mod-fn` must return a map with key ':result' set to the data,
+  either modified or not, and key ':stop' to 'true' to not pass the result to next from and return the result else
+  'false' to continue and pass the item ':data' as the last item of input to the next form.  And so on until there are no more forms.
+  The `stop-mod-fn` is always called on the result from the evaluation of the last form."
+  [x stop-mod-fn & forms]
+  (if forms
+    (let [original-val x]
+      (loop [threaded nil
+             stop-mod-fn-result (gensym)
+             forms forms]
+        (if forms
+          (let [form (last forms)
+                remaining-forms (butlast forms)
+                prev-stop-mod-fn-result (if (seq? remaining-forms)
+                                          (gensym)
+                                          original-val)
+                sub (if (seq? remaining-forms)
+                      `(~:data ~prev-stop-mod-fn-result)
+                      prev-stop-mod-fn-result)
+                threaded-let (let [return-for-ok (if threaded
+                                                   threaded
+                                                   `(~:data ~stop-mod-fn-result))
+                                   threaded-form (if (seq? form)
+                                                   (with-meta `(~(first form) ~@(next form) ~sub) (meta form))
+                                                   (list form prev-stop-mod-fn-result))
+                                   form-result (gensym)]
+                               `(let [~form-result ~threaded-form
+                                      ~stop-mod-fn-result (~stop-mod-fn ~form-result)]
+                                  (if (~:stop ~stop-mod-fn-result)
+                                    (~:data ~stop-mod-fn-result)
+                                    ~return-for-ok)))]
+            (recur threaded-let prev-stop-mod-fn-result remaining-forms))
+          threaded)))
+    x))
+
 
 
