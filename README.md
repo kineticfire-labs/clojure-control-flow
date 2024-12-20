@@ -18,13 +18,55 @@ Utilities for control flow mechanisms suitable for [Clojure](https://clojure.org
 # Motivation
 
 The *clojure-control-flow* library provides functions for managing control flow with an emphasis on keeping code more 
-linear (rather than sliding to the right margin), particularly during consecutive data validation steps.
+linear--rather than marching to the right margin--particularly during consecutive data validation steps resulting from 
+nested `if` and `let` statements.
 
+Consider the case when evaluating input from a web form submitted by a user that contains a user's name, email address, 
+and phone number.  Assume that a validation function is available for each item, and that each function returns a map 
+result with key ':valid' set to 'true' if valid or the key set to 'false' with an additional key ':reason' that give the
+reason the input was invalid.  The code for this validation is shown below in Figure 1.
+
+```clojure
+(defn validate-form-data
+   [form-data]
+   (let [name-validation-result (validate-name form-data)]
+      (if-not (:valid name-validation-result)
+         name-validation-result
+         (let [email-validation-result (validate-phone form-data)]
+            (if-not (:valid email-validation-result)
+               email-validation-result
+               (let [phone-validation-result (validate-phone form-data)]
+                  (if-not (:valid phone-validation-result)
+                     phone-validation-result
+                     {:valid true})))))))
+```
+<p align="center">Figure 1 -- Simple Data Validation with Code Marching to Right Margin</p>
+
+Threading macros can help simplify such code and keep it more linear, however breaking out of subsequent validation 
+steps when one fails and receiving data about why a validation failed proves challenging.  Using the `->` macro won't 
+break out of the validation steps if one stage fails, so all steps will always be executed; the `some->` macro will 
+break out of validation steps if one fails but can't convey data on the reason for the failure beyond `nil`.
+
+```clojure
+(ns the-project.core
+   (:require [kineticfire.control-flow.core :as cf]))
+
+(defn validate-form-data
+   [form-data]
+   (let [result (cf/stop-> form-data #(if (:valid %)
+                                         false
+                                         true)
+                           (validate-name)
+                           (validate-email)
+                           (validate-phone))]))
+
+
+```
 
 # Installation
 
-The *clojure-control-flow* library can be installed from [Clojars](https://clojars.org/com.kineticfire/control-flow) using
-one of the following methods:
+The *clojure-control-flow* library can be installed from [Clojars](https://clojars.org/com.kineticfire/control-flow) 
+using one of the following methods:
 
 ## Leiningen/Boot
 
@@ -59,7 +101,7 @@ implementation("com.kineticfire:control-flow:1.0.0")
 Require the namespace in the `project.clj`, `bb.edn`, or similar file:
 ```clojure
 (ns the-project.core
-  (:require [kineticfire.control-flow :as cf]))
+  (:require [kineticfire.control-flow.core :as cf]))
 ```
 
 todo:
