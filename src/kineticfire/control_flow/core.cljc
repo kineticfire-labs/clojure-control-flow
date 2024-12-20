@@ -21,13 +21,182 @@
   (:gen-class))
 
 
+(defmacro continue->
+  "A macro to thread first:  continue if the evaluation function returns 'true'.
+
+  Threads the expression `x` through the forms `forms`. Inserts `x` as the second item in the first form, making a list
+  of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
+  then evaluates the `continue-fn`, which takes exactly one argument:  the output from the evaluation of the current
+  form.  If the `continue-fn` returns 'false', then returns the current result (and does not continue evaluating the
+  forms) else if 'true' then continues evaluating the forms by inserting the first form as the second item in second
+  form, and so on until no forms remain.  The `continue-fn` is not called if there are no forms or on the result from
+  the evaluation of the last form."
+  [x continue-fn & forms]
+  (if forms
+    (let [original-val x]
+      (loop [threaded nil
+             first-iteration true
+             form-result (gensym)
+             forms forms]
+        (if forms
+          (let [form (last forms)
+                remaining-forms (butlast forms)
+                prev-form-result (if (seq? remaining-forms)
+                                   (gensym)
+                                   original-val)
+                threaded-let (let [return-for-ok (if threaded
+                                                   threaded
+                                                   form-result)
+                                   threaded-form (if (seq? form)
+                                                   (with-meta `(~(first form) ~prev-form-result ~@(next form)) (meta form))
+                                                   (list form prev-form-result))]
+                               (if first-iteration
+                                 `(let [~form-result ~threaded-form]
+                                    ~return-for-ok)
+                                 `(let [~form-result ~threaded-form]
+                                    (if (~continue-fn ~form-result)
+                                      ~return-for-ok
+                                      ~form-result))))]
+            (recur threaded-let false prev-form-result remaining-forms))
+          threaded)))
+    x))
+
+
+(defmacro continue->>
+  "A macro to thread last:  continue if the evaluation function returns 'true'.
+
+  Threads the expression `x` through the forms `forms`. Inserts `x` as the last item in the first form, making a list
+  of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
+  then evaluates the `continue-fn`, which takes exactly one argument:  the output from the evaluation of the current
+  form.  If the `continue-fn` returns 'true', then returns the current result (and stops evaluating the forms) else if
+  'false' then continues evaluating the forms by inserting the first form as the last item in second form, and so on
+  until no forms remain.  The `continue-fn` is not called if there are no forms or on the result from the evaluation of
+  the last form."
+  [x continue-fn & forms]
+  (if forms
+    (let [original-val x]
+      (loop [threaded nil
+             first-iteration true
+             form-result (gensym)
+             forms forms]
+        (if forms
+          (let [form (last forms)
+                remaining-forms (butlast forms)
+                prev-form-result (if (seq? remaining-forms)
+                                   (gensym)
+                                   original-val)
+                threaded-let (let [return-for-ok (if threaded
+                                                   threaded
+                                                   form-result)
+                                   threaded-form (if (seq? form)
+                                                   (with-meta `(~(first form) ~@(next form) ~prev-form-result) (meta form))
+                                                   (list form prev-form-result))]
+                               (if first-iteration
+                                 `(let [~form-result ~threaded-form]
+                                    ~return-for-ok)
+                                 `(let [~form-result ~threaded-form]
+                                    (if (~continue-fn ~form-result)
+                                      ~return-for-ok
+                                      ~form-result))))]
+            (recur threaded-let false prev-form-result remaining-forms))
+          threaded)))
+    x))
+
+
+(defmacro continue-mod->
+  "A macro to thread first:  modify the result with the evaluation function, and continue if it indicates 'true'.
+
+  Threads the expression `x` through the forms `forms`. Inserts `x` as the second item in the first form, making a list
+  of it if it is not a list already.  Passes the result of the `continue-mod-fn`, which takes exactly one argument:  the
+  output from the evaluation of the current form.  The `continue-mod-fn` must return a map with key ':result' set to the
+  data, either modified or not, and key ':continue' to 'false' to not pass the result to next from and return the result
+  else 'true' to continue and pass the item ':data' as the second item as input to the next form.  And so on until there
+  are no more forms.  The `continue-mod-fn` is not called if there are no forms; it is always called on the result from
+  the evaluation of the last form."
+  [x continue-mod-fn & forms]
+  (if forms
+    (let [original-val x]
+      (loop [threaded nil
+             continue-mod-fn-result (gensym)
+             forms forms]
+        (if forms
+          (let [form (last forms)
+                remaining-forms (butlast forms)
+                prev-stop-mod-fn-result (if (seq? remaining-forms)
+                                          (gensym)
+                                          original-val)
+                sub (if (seq? remaining-forms)
+                      `(~:data ~prev-stop-mod-fn-result)
+                      prev-stop-mod-fn-result)
+                threaded-let (let [return-for-ok (if threaded
+                                                   threaded
+                                                   `(~:data ~continue-mod-fn-result))
+                                   threaded-form (if (seq? form)
+                                                   (with-meta `(~(first form) ~sub ~@(next form)) (meta form))
+                                                   (list form prev-stop-mod-fn-result))
+                                   form-result (gensym)]
+                               `(let [~form-result ~threaded-form
+                                      ~continue-mod-fn-result (~continue-mod-fn ~form-result)]
+                                  (if (~:continue ~continue-mod-fn-result)
+                                    ~return-for-ok
+                                    (~:data ~continue-mod-fn-result))))]
+            (recur threaded-let prev-stop-mod-fn-result remaining-forms))
+          threaded)))
+    x))
+
+
+(defmacro continue-mod->>
+  "A macro to thread last:  modify the result with the evaluation function, and continue if it indicates 'true'.
+
+  Threads the expression `x` through the forms `forms`. Inserts `x` as the last item in the first form, making a list
+  of it if it is not a list already.  Passes the result of the `continue-mod-fn`, which takes exactly one argument:  the
+  output from the evaluation of the current form.  The `continue-mod-fn` must return a map with key ':result' set to the
+  data, either modified or not, and key ':continue' to 'false' to not pass the result to next from and return the result
+  else 'true' to continue and pass the item ':data' as the last item as input to the next form.  And so on until there
+  are no more forms.  The `continue-mod-fn` is not called if there are no forms; it is always called on the result from
+  the evaluation of the last form."
+  [x continue-mod-fn & forms]
+  (if forms
+    (let [original-val x]
+      (loop [threaded nil
+             continue-mod-fn-result (gensym)
+             forms forms]
+        (if forms
+          (let [form (last forms)
+                remaining-forms (butlast forms)
+                prev-stop-mod-fn-result (if (seq? remaining-forms)
+                                          (gensym)
+                                          original-val)
+                sub (if (seq? remaining-forms)
+                      `(~:data ~prev-stop-mod-fn-result)
+                      prev-stop-mod-fn-result)
+                threaded-let (let [return-for-ok (if threaded
+                                                   threaded
+                                                   `(~:data ~continue-mod-fn-result))
+                                   threaded-form (if (seq? form)
+                                                   (with-meta `(~(first form) ~@(next form) ~sub) (meta form))
+                                                   (list form prev-stop-mod-fn-result))
+                                   form-result (gensym)]
+                               `(let [~form-result ~threaded-form
+                                      ~continue-mod-fn-result (~continue-mod-fn ~form-result)]
+                                  (if (~:continue ~continue-mod-fn-result)
+                                    ~return-for-ok
+                                    (~:data ~continue-mod-fn-result))))]
+            (recur threaded-let prev-stop-mod-fn-result remaining-forms))
+          threaded)))
+    x))
+
+
 (defmacro stop->
-  "Threads the expression `x` through the forms `forms`. Inserts `x` as the second item in the first form, making a list
+  "A macro to thread first:  stop if the evaluation function returns 'true'.
+
+  Threads the expression `x` through the forms `forms`. Inserts `x` as the second item in the first form, making a list
   of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
   then evaluates the `stop-fn`, which takes exactly one argument:  the output from the evaluation of the current form.
   If the `stop-fn` returns 'true', then returns the current result (and stops evaluating the forms) else if 'false'
   then continues evaluating the forms by inserting the first form as the second item in second form, and so on until no
-  forms remain.  The `stop-fn` is not called on the result from the evaluation of the last form."
+  forms remain.  The `stop-fn` is not called if there are no forms or on the result from the evaluation of the last
+  form."
   [x stop-fn & forms]
   (if forms
     (let [original-val x]
@@ -60,12 +229,15 @@
 
 
 (defmacro stop->>
-  "Threads the expression `x` through the forms `forms`. Inserts `x` as the last item in the first form, making a list
+  "A macro to thread last:  stop if the evaluation function returns 'true'.
+
+  Threads the expression `x` through the forms `forms`. Inserts `x` as the last item in the first form, making a list
   of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
   then evaluates the `stop-fn`, which takes exactly one argument:  the output from the evaluation of the current form.
   If the `stop-fn` returns 'true', then returns the current result (and stops evaluating the forms) else if 'false'
   then continues evaluating the forms by inserting the first form as the last item in second form, and so on until no
-  forms remain.  The `stop-fn` is not called on the result from the evaluation of the last form."
+  forms remain.  The `stop-fn` is not called if there are no forms or on the result from the evaluation of the last
+  form."
   [x stop-fn & forms]
   (if forms
     (let [original-val x]
@@ -98,12 +270,15 @@
 
 
 (defmacro stop-mod->
-  "Threads the expression `x` through the forms `forms`. Inserts `x` as the second item in the first form, making a list
+  "A macro to thread first:  modify the result with the evaluation function, and stop if it indicates 'true'.
+
+  Threads the expression `x` through the forms `forms`. Inserts `x` as the second item in the first form, making a list
   of it if it is not a list already.  Passes the result of the `stop-mod-fn`, which takes exactly one argument:  the
   output from the evaluation of the current form.  The `stop-mod-fn` must return a map with key ':result' set to the
   data, either modified or not, and key ':stop' to 'true' to not pass the result to next from and return the result else
   'false' to continue and pass the item ':data' as the second item as input to the next form.  And so on until there
-  are no more forms. The `stop-mod-fn` is always called on the result from the evaluation of the last form."
+  are no more forms.  The `stop-mod-fn` is not called if there are no forms; it is always called on the result from the
+  evaluation of the last form."
   [x stop-mod-fn & forms]
   (if forms
     (let [original-val x]
@@ -137,12 +312,15 @@
 
 
 (defmacro stop-mod->>
-  "Threads the expression `x` through the forms `forms`. Inserts `x` as the last item in the first form, making a list
-  of it if it is not a list already.  Passes the result to the `stop-mod-fn`, which takes exactly one argument:  the output
-  from the evaluation of the current form.  The `stop-mod-fn` must return a map with key ':result' set to the data,
-  either modified or not, and key ':stop' to 'true' to not pass the result to next from and return the result else
-  'false' to continue and pass the item ':data' as the last item of input to the next form.  And so on until there are no more forms.
-  The `stop-mod-fn` is always called on the result from the evaluation of the last form."
+  "A macro to thread last:  modify the result with the evaluation function, and stop if it indicates 'true'.
+
+  Threads the expression `x` through the forms `forms`. Inserts `x` as the last item in the first form, making a list
+  of it if it is not a list already.  Passes the result to the `stop-mod-fn`, which takes exactly one argument:  the
+  output from the evaluation of the current form.  The `stop-mod-fn` must return a map with key ':result' set to the
+  data, either modified or not, and key ':stop' to 'true' to not pass the result to next from and return the result else
+  'false' to continue and pass the item ':data' as the last item of input to the next form.  And so on until there are
+  no more forms. The `stop-mod-fn` is not called if there are no forms; it is always called on the result from the
+  evaluation of the last form."
   [x stop-mod-fn & forms]
   (if forms
     (let [original-val x]
@@ -173,6 +351,3 @@
             (recur threaded-let prev-stop-mod-fn-result remaining-forms))
           threaded)))
     x))
-
-
-
