@@ -58,20 +58,20 @@ Figure 2.
 
 (defn validate-form-data
    [form-data]
-   (cf/stop-> form-data #(if (:valid %)
-                            false
-                            true)
-              (validate-name)
-              (validate-email)
-              (validate-mailing-address)
-              (validate-phone)))
+   (cf/continue-> form-data #(if (:valid %)
+                                true
+                                false)
+                  (validate-name)
+                  (validate-email)
+                  (validate-mailing-address)
+                  (validate-phone)))
 ```
 <p align="center">Figure 2 -- Data Validation Code Kept More Linear with <em>clojure-control-flow</em></p>
 
-The example in Figure 2 uses the `stop->` macro from *clojure-control-flow*, which is similar to `->` in Clojure.core
-which threads the first argument through the forms as the second item; unlike `->`, `stop->` accepts a function that 
-determines if the threading process should exit at each step.  The function accepts one argument--the result of 
-evaluating the current form--and returns `true` to stop the process or `false` to continue.
+The example in Figure 2 uses the `continue->` macro from *clojure-control-flow*, which is similar to `->` in 
+Clojure.core which threads the first argument through the forms as the second item; unlike `->`, `stop->` accepts a 
+function that determines if the threading process should continue at each step.  The function accepts one argument--the 
+result of evaluating the current form--and returns `true` to continue the process or `false` to stop.
 
 The *clojure-control-flow* library provides functionality to keep code more linear and readable for this and other such
 scenarios.  The library operates on and returns basic data structures and is not limited to a specific usage domain
@@ -162,30 +162,30 @@ the evaluation of the last form.
 
 ```clojure
 ;; continues through all forms
-(cf/continue-> {:z 26} #(if (not (contains? % :k))
-                           true
-                           false)
+(cf/continue-> {:z 0} #(if (not (contains? % :k))
+                          true
+                          false)
                (assoc :a 1)
                (assoc :b 2)
                (assoc :c 3)
                (assoc :d 4)
                (assoc :e 5))
-;;=> {:z 1 :a 1 :b 2 :c 3 :d 4 :e 5}
+;;=> {:z 0 :a 1 :b 2 :c 3 :d 4 :e 5}
 
 ;; stops after 3rd form
-(cf/continue-> {:z 26} #(if (not (contains? % :c))
-                           true
-                           false)
+(cf/continue-> {:z 0} #(if (not (contains? % :c))
+                          true
+                          false)
                (assoc :a 1)
                (assoc :b 2)
                (assoc :c 3)
                (assoc :d 4)
                (assoc :e 5))
-;;=> {:z 1 :a 1 :b 2 :c 3}
+;;=> {:z 0 :a 1 :b 2 :c 3}
 
 ;; no forms defined so returns 'x'; the 'continue-fn' function is irrelevant
-(continue-> {:z 1} #()) 
-;;=> {:z 1}
+(continue-> {:z 0} #()) 
+;;=> {:z 0}
 ```
 
 ### continue->>
