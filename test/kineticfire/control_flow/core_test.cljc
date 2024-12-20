@@ -23,6 +23,19 @@
             [kineticfire.control-flow.core :as cf]))
 
 
+
+(defn assoc-map-last
+  "Performs 'assoc', but puts the map last.  For testing."
+  [key val map]
+  (assoc map key val))
+
+
+(defn assoc-map-middle
+  "Performs 'assoc', but puts the map in the middle.  For testing."
+  [key map val]
+  (assoc map key val))
+
+
 (deftest continue->test
   (testing "continue->: no forms"
     (let [v (cf/continue-> {:z 26} #(if (contains? % :z)
@@ -197,6 +210,111 @@
                         (str "s"))]
       (is (string? v))
       (is (= v "stuvwxyz")))))
+
+
+
+;;todo
+(deftest continue-as->test
+  (testing "continue-as->: no forms"
+    (let [v (cf/continue-as-> {:z 0} x #(if (contains? % :z)
+                                           true
+                                           false))]
+      (is (map? v))
+      (is (= v {:z 0}))))
+  (testing "continue-as->: one form, first arg, continue"
+    (let [v (cf/continue-as-> {:z 0} x #(if (contains? % :z)
+                                          true
+                                          false)
+                              (assoc x :a 1))]
+      (is (map? v))
+      (is (= v {:z 0 :a 1}))))
+  (testing "continue-as->: two forms, middle arg, continue"
+    (let [v (cf/continue-as-> {:z 0} x #(if (contains? % :z)
+                                          true
+                                          false)
+                              (assoc-map-middle :a x 1))]
+      (is (map? v))
+      (is (= v {:z 0 :a 1}))))
+  (testing "continue-as->: two forms, last arg, continue"
+    (let [v (cf/continue-as-> {:z 0} x #(if (contains? % :z)
+                                                    true
+                                                    false)
+                              (assoc-map-last :a 1 x))]
+      (is (map? v))
+      (is (= v {:z 0 :a 1}))))
+  ;(testing "continue-as->: two forms, continue"
+  ;  (let [v (cf/continue-as-> {:z 26} #(if (contains? % :z)
+  ;                                    true
+  ;                                    false)
+  ;                         (assoc :a 1)
+  ;                         (assoc :b 2))]
+  ;    (is (map? v))
+  ;    (is (= v {:z 26 :a 1 :b 2}))))
+  ;(testing "continue-as->: three forms, continue"
+  ;  (let [v (cf/continue-as-> {:z 26} #(if (contains? % :z)
+  ;                                    true
+  ;                                    false)
+  ;                         (assoc :a 1)
+  ;                         (assoc :b 2)
+  ;                         (assoc :c 3))]
+  ;    (is (map? v))
+  ;    (is (= v {:z 26 :a 1 :b 2 :c 3}))))
+  ;(testing "continue-as->: five forms, continue fails on 1st"
+  ;  (let [v (cf/continue-as-> {:z 26} #(if (not (contains? % :a))
+  ;                                    true
+  ;                                    false)
+  ;                         (assoc :a 1)
+  ;                         (assoc :b 2)
+  ;                         (assoc :c 3)
+  ;                         (assoc :d 4)
+  ;                         (assoc :e 5))]
+  ;    (is (map? v))
+  ;    (is (= v {:z 26 :a 1}))))
+  ;(testing "continue-as->: five forms, continue fails on 2nd"
+  ;  (let [v (cf/continue-as-> {:z 26} #(if (not (contains? % :b))
+  ;                                    true
+  ;                                    false)
+  ;                         (assoc :a 1)
+  ;                         (assoc :b 2)
+  ;                         (assoc :c 3)
+  ;                         (assoc :d 4)
+  ;                         (assoc :e 5))]
+  ;    (is (map? v))
+  ;    (is (= v {:z 26 :a 1 :b 2}))))
+  ;(testing "continue-as->: five forms, continue fails on 3rd"
+  ;  (let [v (cf/continue-as-> {:z 26} #(if (not (contains? % :c))
+  ;                                    true
+  ;                                    false)
+  ;                         (assoc :a 1)
+  ;                         (assoc :b 2)
+  ;                         (assoc :c 3)
+  ;                         (assoc :d 4)
+  ;                         (assoc :e 5))]
+  ;    (is (map? v))
+  ;    (is (= v {:z 26 :a 1 :b 2 :c 3}))))
+  ;(testing "continue-as->: five forms, continue fails on 4th"
+  ;  (let [v (cf/continue-as-> {:z 26} #(if (not (contains? % :d))
+  ;                                    true
+  ;                                    false)
+  ;                         (assoc :a 1)
+  ;                         (assoc :b 2)
+  ;                         (assoc :c 3)
+  ;                         (assoc :d 4)
+  ;                         (assoc :e 5))]
+  ;    (is (map? v))
+  ;    (is (= v {:z 26 :a 1 :b 2 :c 3 :d 4}))))
+  ;(testing "continue-as->: five forms, continue to 5th (would fail, but not eval)"
+  ;  (let [v (cf/continue-as-> {:z 26} #(if (not (contains? % :e))
+  ;                                    true
+  ;                                    false)
+  ;                         (assoc :a 1)
+  ;                         (assoc :b 2)
+  ;                         (assoc :c 3)
+  ;                         (assoc :d 4)
+  ;                         (assoc :e 5))]
+  ;    (is (map? v))
+  ;    (is (= v {:z 26 :a 1 :b 2 :c 3 :d 4 :e 5}))))
+    )
 
 
 (deftest continue-mod->test

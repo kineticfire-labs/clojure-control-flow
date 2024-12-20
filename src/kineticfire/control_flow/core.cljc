@@ -103,6 +103,52 @@
     x))
 
 
+(defmacro continue-as->
+  "A macro to thread in an arbitrary position:  continue if the evaluation function returns 'true'.
+
+  Threads the expression `expr` through the forms `forms`. Binds `name` to `expr` in the first form, making a list
+  of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
+  then evaluates the `continue-fn`, which takes exactly one argument:  the output from the evaluation of the current
+  form.  If the `continue-fn` returns 'false', then returns the current result (and does not continue evaluating the
+  forms) else if 'true' then continues evaluating the forms by binding `name` to the result for the second form, and so
+  on until no forms remain.  The `continue-fn` is not called if there are no forms or on the result from the evaluation
+  of the last form."
+  [expr name continue-fn & forms]
+  (if forms
+    (let [original-val expr]
+      (loop [threaded nil
+             first-iteration true
+             form-result (gensym)
+             forms forms]
+        (println "LOOP----------------------")
+        (if forms
+          (let [form (last forms)
+                remaining-forms (butlast forms)
+                prev-form-result (if (seq? remaining-forms)
+                                   (gensym)
+                                   original-val)
+                threaded-let (let [return-for-ok (if threaded
+                                                   threaded
+                                                   form-result)
+                                   ;threaded-form (if (seq? form)
+                                   ;                (with-meta `(~(first form) ~prev-form-result ~@(next form)) (meta form))
+                                   ;                (list form prev-form-result))
+                                   ]
+                               (if first-iteration
+                                 `(let [~name ~prev-form-result
+                                        ~form-result ~form]
+                                    ~return-for-ok)
+                                 `(let [~name ~prev-form-result
+                                        ~form-result ~form]
+                                    (if (~continue-fn ~form-result)
+                                      ~return-for-ok
+                                      ~form-result))))]
+            (println "threaded-let: " threaded-let)
+            (recur threaded-let false prev-form-result remaining-forms))
+          threaded)))
+    expr))
+
+
 (defmacro continue-mod->
   "A macro to thread first:  modify the result with the evaluation function, and continue if it indicates 'true'.
 
