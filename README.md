@@ -137,14 +137,16 @@ Call a function from the *clojure-control-flow* library:
 
 1. [continue->](#continue-)
 2. [continue->>](#continue--1)
-3. [continue-as->(#continue-as-)]
-3. [continue-mod->](#continue-mod-)
-4. [continue-mod->>](#continue-mod--1)
-5. [stop->](#stop-)
-6. [stop->>](#stop--1)
-7. [stop-as->(#stop-as-)]
-7. [stop-mod->](#stop-mod-)
-8. [stop-mod->>](#stop-mod--1)
+3. [continue-as->](#continue-as-)
+4. [continue-mod->](#continue-mod-)
+5. [continue-mod->>](#continue-mod--1)
+6. [continue-mod-as->](#continue-mod-as)
+7. [stop->](#stop-)
+8. [stop->>](#stop--1)
+9. [stop-as->](#stop-as-)
+10. [stop-mod->](#stop-mod-)
+11. [stop-mod->>](#stop-mod--1)
+12. [stop-mod-as->](#stop-mod-as)
 
 
 ### continue->
@@ -248,7 +250,7 @@ Threads the expression `expr` through the forms `forms`. Binds `name` to `expr` 
 of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
 then evaluates the `continue-fn`, which takes exactly one argument:  the output from the evaluation of the current
 form.  If the `continue-fn` returns `false`, then returns the current result (and does not continue evaluating the
-forms) else if `true` then continues evaluating the forms by binding `name` to the result for the second form, and so
+forms) else if `true` then continues evaluating the forms by binding `name` to the result from the first form, and so
 on until no forms remain.  The `continue-fn` is not called if there are no forms or on the result from the evaluation
 of the last form.
 
@@ -383,6 +385,67 @@ the evaluation of the last form.
 ;; no forms defined so returns 'x'; the 'continue-fn' function is irrelevant
 (continue->> "xyz" #())
 ;;=> "xyz"
+```
+
+
+### continue-mod-as->
+
+```clojure
+(continue-mod-as> expr name continue-mod-fn & forms)
+```
+
+A macro to thread in an arbitrary position:  modify the result with the evaluation function, and continue if it
+indicates `true`.
+
+Threads the expression `expr` through the forms `forms`. Binds `name` to `expr` in the first form, making a list of it
+if it is not a list already.  Passes the result of the `continue-mod-fn`, which takes exactly one argument:  the
+output from the evaluation of the current form.  The `continue-mod-fn` must return a map with key `:result` set to the
+data, either modified or not, and key `:continue` to `false` to not pass the result to next from and return the result
+else `true` to continue and pass the item `:data` to the next form by binding `name` to the result from the first form.
+And so on until there are no more forms.  The `continue-mod-fn` is not called if there are no forms; it is always
+called on the result from the evaluation of the last form.
+
+```clojure
+;; test helper
+(defn assoc-map-last
+  "Performs 'assoc', but puts the map last.  For testing."
+  [key val map]
+  (assoc map key val))
+
+;; test helper
+(defn assoc-map-middle
+  "Performs 'assoc', but puts the map in the middle.  For testing."
+  [key map val]
+  (assoc map key val))
+
+
+;; continues through all forms
+(continue-mod-as> {:z 0} x #(if (not (contains? % :k))
+                              {:continue true :data (update (assoc % :fn "cont") :z inc)}
+                              {:continue false :data (update (assoc % :fn "stop") :z inc)})
+                  (assoc x :a 1)
+                  (assoc-map-middle :b x 2)
+                  (assoc-map-last :c 3 x)
+                  (assoc x :d 4)
+                  (assoc x :e 5))
+;;=> {:z 5 :a 1 :b 2 :c 3 :d 4 :e 5 :fn "cont"}
+
+;; stops after 3rd form
+(continue-mod-as> {:z 0} x #(if (not (contains? % :c))
+                              {:continue true :data (update (assoc % :fn "cont") :z inc)}
+                              {:continue false :data (update (assoc % :fn "stop") :z inc)})
+                  (assoc x :a 1)
+                  (assoc-map-middle :b x 2)
+                  (assoc-map-last :c 3 x)
+                  (assoc x :d 4)
+                  (assoc x :e 5))
+;;=> {:z 3 :a 1 :b 2 :c 3 :fn "stop"}
+
+;; no forms defined so returns 'x'; the 'continue-fn' function is irrelevant
+(continue-mod-as> {:z 0} x #((if (not (contains? % :c))
+                               {:continue true :data (update (assoc % :fn "cont") :z inc)}
+                               {:continue false :data (update (assoc % :fn "stop") :z inc)}))) 
+;;=> {:z 0}
 ```
 
 ### stop->
