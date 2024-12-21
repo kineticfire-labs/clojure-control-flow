@@ -120,13 +120,13 @@ Require the namespace in the `project.clj`, `bb.edn`, or similar file:
 
 Call a function from the *clojure-control-flow* library:
 ```clojure
-(cf/stop-> data #(if (:valid %)
-                    false
-                    true)
-           (validate-name)
-           (validate-email)
-           (validate-mailing-address)
-           (validate-phone))
+(stop-> data #(if (:valid %)
+                 false
+                 true)
+        (validate-name)
+        (validate-email)
+        (validate-mailing-address)
+        (validate-phone))
 ```
 
 # Documentation
@@ -137,10 +137,12 @@ Call a function from the *clojure-control-flow* library:
 
 1. [continue->](#continue-)
 2. [continue->>](#continue--1)
+3. [continue-as->(#continue-as-)]
 3. [continue-mod->](#continue-mod-)
 4. [continue-mod->>](#continue-mod--1)
 5. [stop->](#stop-)
 6. [stop->>](#stop--1)
+7. [stop-as->(#stop-as-)]
 7. [stop-mod->](#stop-mod-)
 8. [stop-mod->>](#stop-mod--1)
 
@@ -162,25 +164,25 @@ the evaluation of the last form.
 
 ```clojure
 ;; continues through all forms
-(cf/continue-> {:z 0} #(if (not (contains? % :k))
-                          true
-                          false)
-               (assoc :a 1)
-               (assoc :b 2)
-               (assoc :c 3)
-               (assoc :d 4)
-               (assoc :e 5))
+(continue-> {:z 0} #(if (not (contains? % :k))
+                       true
+                       false)
+            (assoc :a 1)
+            (assoc :b 2)
+            (assoc :c 3)
+            (assoc :d 4)
+            (assoc :e 5))
 ;;=> {:z 0 :a 1 :b 2 :c 3 :d 4 :e 5}
 
 ;; stops after 3rd form
-(cf/continue-> {:z 0} #(if (not (contains? % :c))
-                          true
-                          false)
-               (assoc :a 1)
-               (assoc :b 2)
-               (assoc :c 3)
-               (assoc :d 4)
-               (assoc :e 5))
+(continue-> {:z 0} #(if (not (contains? % :c))
+                       true
+                       false)
+            (assoc :a 1)
+            (assoc :b 2)
+            (assoc :c 3)
+            (assoc :d 4)
+            (assoc :e 5))
 ;;=> {:z 0 :a 1 :b 2 :c 3}
 
 ;; no forms defined so returns 'x'; the 'continue-fn' function is irrelevant
@@ -207,29 +209,87 @@ the last form.
 ;; (:require [clojure.string :as str])
 
 ;; continues through all forms
-(cf/continue->> "xyz" #(if (not (str/includes? % "k"))
-                          true
-                          false)
-                (str "w")
-                (str "v")
-                (str "u")
-                (str "t")
-                (str "s"))
+(continue->> "xyz" #(if (not (str/includes? % "k"))
+                       true
+                       false)
+             (str "w")
+             (str "v")
+             (str "u")
+             (str "t")
+             (str "s"))
 ;;=> stuvwxyz
 
 ;; stops after 3rd form
-(cf/continue->> "xyz" #(if (not (str/includes? % "u"))
-                                 true
-                                 false)
-                        (str "w")
-                        (str "v")
-                        (str "u")
-                        (str "t")
-                        (str "s"))
+(continue->> "xyz" #(if (not (str/includes? % "u"))
+                       true
+                       false)
+             (str "w")
+             (str "v")
+             (str "u")
+             (str "t")
+             (str "s"))
 ;;=> uvwxyz
 
 ;; no forms defined so returns 'x'; the 'continue-fn' function is irrelevant
 (continue->> "xyz" #())
+;;=> "xyz"
+```
+
+
+### continue-as->
+
+```clojure
+(continue-as-> expr name continue-fn & forms)
+```
+
+A macro to thread in an arbitrary position:  continue if the evaluation function returns `true`.
+
+Threads the expression `expr` through the forms `forms`. Binds `name` to `expr` in the first form, making a list
+of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
+then evaluates the `continue-fn`, which takes exactly one argument:  the output from the evaluation of the current
+form.  If the `continue-fn` returns `false`, then returns the current result (and does not continue evaluating the
+forms) else if `true` then continues evaluating the forms by binding `name` to the result for the second form, and so
+on until no forms remain.  The `continue-fn` is not called if there are no forms or on the result from the evaluation
+of the last form.
+
+```clojure
+;; test helper
+(defn assoc-map-last
+   "Performs 'assoc', but puts the map last.  For testing."
+   [key val map]
+   (assoc map key val))
+
+;; test helper
+(defn assoc-map-middle
+   "Performs 'assoc', but puts the map in the middle.  For testing."
+   [key map val]
+   (assoc map key val))
+
+
+;; continues through all forms
+(continue-as-> {:z 0} x #(if (contains? % :a)
+                            true
+                            false)
+               (assoc x :a 1)
+               (assoc-map-middle :b x 2)
+               (assoc-map-last :c 3 x)
+               (assoc x :d 4)
+               (assoc x :e 5))
+;;=> {:z 0 :a 1 :b 2 :c 3 :4 :e 5}
+
+;; stops after 3rd form
+(continue-as-> {:z 0} x #(if (not (contains? % :c))
+                            true
+                            false)
+               (assoc x :a 1)
+               (assoc-map-middle :b x 2)
+               (assoc-map-last :c 3 x)
+               (assoc x :d 4)
+               (assoc x :e 5))
+;;=> {:z 0 :a 1 :b 2 :c 3}
+
+;; no forms defined so returns 'x'; the 'continue-fn' function is irrelevant
+(continue-as-> "xyz" #())
 ;;=> "xyz"
 ```
 
@@ -251,25 +311,25 @@ the evaluation of the last form.
 
 ```clojure
 ;; continues through all forms
-(cf/continue-mod-> {:z 0} #(if (not (contains? % :k))
-                               {:continue true :data (update (assoc % :fn "cont") :z inc)}
-                               {:continue false :data (update (assoc % :fn "stop") :z inc)})
-                   (assoc :a 1)
-                   (assoc :b 2)
-                   (assoc :c 3)
-                   (assoc :d 4)
-                   (assoc :e 5))
+(continue-mod-> {:z 0} #(if (not (contains? % :k))
+                           {:continue true :data (update (assoc % :fn "cont") :z inc)}
+                           {:continue false :data (update (assoc % :fn "stop") :z inc)})
+                (assoc :a 1)
+                (assoc :b 2)
+                (assoc :c 3)
+                (assoc :d 4)
+                (assoc :e 5))
 ;;=> {:z 5 :a 1 :b 2 :c 3 :d 4 :e 5 :fn "cont"}
 
 ;; stops after 3rd form
-(cf/continue-mod-> {:z 0} #(if (not (contains? % :c))
-                               {:continue true :data (update (assoc % :fn "cont") :z inc)}
-                               {:continue false :data (update (assoc % :fn "stop") :z inc)})
-                   (assoc :a 1)
-                   (assoc :b 2)
-                   (assoc :c 3)
-                   (assoc :d 4)
-                   (assoc :e 5))
+(continue-mod-> {:z 0} #(if (not (contains? % :c))
+                           {:continue true :data (update (assoc % :fn "cont") :z inc)}
+                           {:continue false :data (update (assoc % :fn "stop") :z inc)})
+                (assoc :a 1)
+                (assoc :b 2)
+                (assoc :c 3)
+                (assoc :d 4)
+                (assoc :e 5))
 ;;=> {:z 3 :a 1 :b 2 :c 3 :fn "stop"}
 
 ;; no forms defined so returns 'x'; the 'continue-fn' function is irrelevant
@@ -299,25 +359,25 @@ the evaluation of the last form.
 ;; (:require [clojure.string :as str])
 
 ;; continues through all forms
-(cf/continue-mod->> "xyz" #(if (not (str/includes? % "v"))
-                              {:continue true :data (str "+" %)}
-                              {:continue false :data (str "-" %)})
-                    (str "w")
-                    (str "v")
-                    (str "u")
-                    (str "t")
-                    (str "s"))
+(continue-mod->> "xyz" #(if (not (str/includes? % "v"))
+                           {:continue true :data (str "+" %)}
+                           {:continue false :data (str "-" %)})
+                 (str "w")
+                 (str "v")
+                 (str "u")
+                 (str "t")
+                 (str "s"))
 ;;=> +s+t+u+v+wxyz
 
 ;; stops after 3rd form
-(cf/continue-mod->> "xyz" #(if (not (str/includes? % "v"))
-                              {:continue true :data (str "+" %)}
-                              {:continue false :data (str "-" %)})
-                    (str "w")
-                    (str "v")
-                    (str "u")
-                    (str "t")
-                    (str "s"))
+(continue-mod->> "xyz" #(if (not (str/includes? % "v"))
+                           {:continue true :data (str "+" %)}
+                           {:continue false :data (str "-" %)})
+                 (str "w")
+                 (str "v")
+                 (str "u")
+                 (str "t")
+                 (str "s"))
 ;;=> -v+wxyz
 
 ;; no forms defined so returns 'x'; the 'continue-fn' function is irrelevant
@@ -343,25 +403,25 @@ form.
 
 ```clojure
 ;; continues through all forms
-(cf/stop-> {:z 0} #(if (contains? % :k)
-                       true
-                       false)
-               (assoc :a 1)
-               (assoc :b 2)
-               (assoc :c 3)
-               (assoc :d 4)
-               (assoc :e 5))
+(stop-> {:z 0} #(if (contains? % :k)
+                   true
+                   false)
+        (assoc :a 1)
+        (assoc :b 2)
+        (assoc :c 3)
+        (assoc :d 4)
+        (assoc :e 5))
 ;;=> {:z 0 :a 1 :b 2 :c 3 :d 4 :e 5}
 
 ;; stops after 3rd form
-(cf/stop-> {:z 0} #(if (contains? % :c)
-                       true
-                       false)
-               (assoc :a 1)
-               (assoc :b 2)
-               (assoc :c 3)
-               (assoc :d 4)
-               (assoc :e 5))
+(stop-> {:z 0} #(if (contains? % :c)
+                   true
+                   false)
+        (assoc :a 1)
+        (assoc :b 2)
+        (assoc :c 3)
+        (assoc :d 4)
+        (assoc :e 5))
 ;;=> {:z 0 :a 1 :b 2 :c 3}
 
 ;; no forms defined so returns 'x'; the 'continue-fn' function is irrelevant
@@ -388,29 +448,87 @@ form.
 ;; (:require [clojure.string :as str])
 
 ;; continues through all forms
-(cf/stop->> "xyz" #(if (str/includes? % "a")
-                      true
-                      false)
-            (str "w")
-            (str "v")
-            (str "u")
-            (str "t")
-            (str "s"))
+(stop->> "xyz" #(if (str/includes? % "a")
+                   true
+                   false)
+         (str "w")
+         (str "v")
+         (str "u")
+         (str "t")
+         (str "s"))
 ;;=> stuvwxyz
 
 ;; stops after 3rd form
-(cf/stop->> "xyz" #(if (str/includes? % "u")
-                      true
-                      false)
-            (str "w")
-            (str "v")
-            (str "u")
-            (str "t")
-            (str "s"))
+(stop->> "xyz" #(if (str/includes? % "u")
+                   true
+                   false)
+         (str "w")
+         (str "v")
+         (str "u")
+         (str "t")
+         (str "s"))
 ;;=> uvwxyz
 
 ;; no forms defined so returns 'x'; the 'continue-fn' function is irrelevant
 (stop->> "xyz" #())
+;;=> "xyz"
+```
+
+
+### stop-as->
+
+```clojure
+(stop-as-> expr name stop-fn & forms)
+```
+
+A macro to thread in an arbitrary position:  stop if the evaluation function returns `true`.
+
+Threads the expression `expr` through the forms `forms`. Binds `name` to `expr` in the first form, making a list
+of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
+then evaluates the `stop-fn`, which takes exactly one argument:  the output from the evaluation of the current form.
+If the `stop-fn` returns `true`, then returns the current result (and does not continue evaluating the forms) else if
+`false` then continues evaluating the forms by binding `name` to the result for the second form, and so on until no
+forms remain.  The `stop-fn` is not called if there are no forms or on the result from the evaluation of the last
+form.
+
+```clojure
+;; test helper
+(defn assoc-map-last
+   "Performs 'assoc', but puts the map last.  For testing."
+   [key val map]
+   (assoc map key val))
+
+;; test helper
+(defn assoc-map-middle
+   "Performs 'assoc', but puts the map in the middle.  For testing."
+   [key map val]
+   (assoc map key val))
+
+
+;; continues through all forms
+(stop-as-> {:z 0} x #(if (contains? % :z)
+                        true
+                        false)
+           (assoc x :a 1)
+           (assoc-map-middle :b x 2)
+           (assoc-map-last :c 3 x)
+           (assoc x :d 4)
+           (assoc x :e 5))
+;;=> {:z 0 :a 1 :b 2 :c 3 :4 :e 5}
+
+;; stops after 3rd form
+(stop-as-> {:z 0} x #(if (contains? % :c)
+                        true
+                        false)
+           (assoc x :a 1)
+           (assoc-map-middle :b x 2)
+           (assoc-map-last :c 3 x)
+           (assoc x :d 4)
+           (assoc x :e 5))
+;;=> {:z 0 :a 1 :b 2 :c 3}
+
+;; no forms defined so returns 'x'; the 'continue-fn' function is irrelevant
+(stop-as-> "xyz" #())
 ;;=> "xyz"
 ```
 
@@ -432,25 +550,25 @@ evaluation of the last form.
 
 ```clojure
 ;; continues through all forms
-(cf/stop-mod-> {:z 0} #(if (contains? % :k)
-                          {:continue true :data (update (assoc % :fn "stop") :z inc)}
-                          {:continue false :data (update (assoc % :fn "cont") :z inc)})
-               (assoc :a 1)
-               (assoc :b 2)
-               (assoc :c 3)
-               (assoc :d 4)
-               (assoc :e 5))
+(stop-mod-> {:z 0} #(if (contains? % :k)
+                       {:continue true :data (update (assoc % :fn "stop") :z inc)}
+                       {:continue false :data (update (assoc % :fn "cont") :z inc)})
+            (assoc :a 1)
+            (assoc :b 2)
+            (assoc :c 3)
+            (assoc :d 4)
+            (assoc :e 5))
 ;;=> {:z 5 :a 1 :b 2 :c 3 :d 4 :e 5 :fn "cont"}
 
 ;; stops after 3rd form
-(cf/stop-mod-> {:z 0} #(if (contains? % :c)
-                          {:continue true :data (update (assoc % :fn "stop") :z inc)}
-                          {:continue false :data (update (assoc % :fn "cont") :z inc)})
-               (assoc :a 1)
-               (assoc :b 2)
-               (assoc :c 3)
-               (assoc :d 4)
-               (assoc :e 5))
+(stop-mod-> {:z 0} #(if (contains? % :c)
+                       {:continue true :data (update (assoc % :fn "stop") :z inc)}
+                       {:continue false :data (update (assoc % :fn "cont") :z inc)})
+            (assoc :a 1)
+            (assoc :b 2)
+            (assoc :c 3)
+            (assoc :d 4)
+            (assoc :e 5))
 ;;=> {:z 3 :a 1 :b 2 :c 3 :fn "stop"}
 
 ;; no forms defined so returns 'x'; the 'stop-fn' function is irrelevant
@@ -480,25 +598,25 @@ the last form.
 ;; (:require [clojure.string :as str])
 
 ;; continues through all forms
-(cf/stop-mod->> "xyz" #(if (str/includes? % "a")
-                              {:continue true :data (str "+" %)}
-                              {:continue false :data (str "-" %)})
-                    (str "w")
-                    (str "v")
-                    (str "u")
-                    (str "t")
-                    (str "s"))
+(stop-mod->> "xyz" #(if (str/includes? % "a")
+                       {:continue true :data (str "+" %)}
+                       {:continue false :data (str "-" %)})
+             (str "w")
+             (str "v")
+             (str "u")
+             (str "t")
+             (str "s"))
 ;;=> +s+t+u+v+wxyz
 
 ;; stops after 3rd form
-(cf/stop-mod->> "xyz" #(if (str/includes? % "u")
-                              {:continue true :data (str "+" %)}
-                              {:continue false :data (str "-" %)})
-                    (str "w")
-                    (str "v")
-                    (str "u")
-                    (str "t")
-                    (str "s"))
+(stop-mod->> "xyz" #(if (str/includes? % "u")
+                       {:continue true :data (str "+" %)}
+                       {:continue false :data (str "-" %)})
+             (str "w")
+             (str "v")
+             (str "u")
+             (str "t")
+             (str "s"))
 ;;=> -u+v+wxyz
 
 ;; no forms defined so returns 'x'; the 'stop-fn' function is irrelevant
