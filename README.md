@@ -140,13 +140,13 @@ Call a function from the *clojure-control-flow* library:
 3. [continue-as->](#continue-as-)
 4. [continue-mod->](#continue-mod-)
 5. [continue-mod->>](#continue-mod--1)
-6. [continue-mod-as->](#continue-mod-as)
+6. [continue-mod-as->](#continue-mod-as-)
 7. [stop->](#stop-)
 8. [stop->>](#stop--1)
 9. [stop-as->](#stop-as-)
 10. [stop-mod->](#stop-mod-)
 11. [stop-mod->>](#stop-mod--1)
-12. [stop-mod-as->](#stop-mod-as)
+12. [stop-mod-as->](#stop-mod-as-)
 
 
 ### continue->
@@ -314,8 +314,8 @@ the evaluation of the last form.
 ```clojure
 ;; continues through all forms
 (continue-mod-> {:z 0} #(if (not (contains? % :k))
-                           {:continue true :data (update (assoc % :fn "cont") :z inc)}
-                           {:continue false :data (update (assoc % :fn "stop") :z inc)})
+                          {:continue true :data (update (assoc % :fn "cont") :z inc)}
+                          {:continue false :data (update (assoc % :fn "stop") :z inc)})
                 (assoc :a 1)
                 (assoc :b 2)
                 (assoc :c 3)
@@ -335,7 +335,7 @@ the evaluation of the last form.
 ;;=> {:z 3 :a 1 :b 2 :c 3 :fn "stop"}
 
 ;; no forms defined so returns 'x'; the 'continue-fn' function is irrelevant
-(continue-mod-> {:z 0} #((if (not (contains? % :c))
+(continue-mod-> {:z 0} #((if (not (contains? % :z))
                             {:continue true :data (update (assoc % :fn "cont") :z inc)}
                             {:continue false :data (update (assoc % :fn "stop") :z inc)}))) 
 ;;=> {:z 0}
@@ -442,7 +442,7 @@ called on the result from the evaluation of the last form.
 ;;=> {:z 3 :a 1 :b 2 :c 3 :fn "stop"}
 
 ;; no forms defined so returns 'x'; the 'continue-fn' function is irrelevant
-(continue-mod-as> {:z 0} x #((if (not (contains? % :c))
+(continue-mod-as> {:z 0} x #((if (not (contains? % :z))
                                {:continue true :data (update (assoc % :fn "cont") :z inc)}
                                {:continue false :data (update (assoc % :fn "stop") :z inc)}))) 
 ;;=> {:z 0}
@@ -569,7 +569,7 @@ form.
 
 
 ;; continues through all forms
-(stop-as-> {:z 0} x #(if (contains? % :z)
+(stop-as-> {:z 0} x #(if (contains? % :k)
                         true
                         false)
            (assoc x :a 1)
@@ -614,8 +614,8 @@ evaluation of the last form.
 ```clojure
 ;; continues through all forms
 (stop-mod-> {:z 0} #(if (contains? % :k)
-                       {:continue true :data (update (assoc % :fn "stop") :z inc)}
-                       {:continue false :data (update (assoc % :fn "cont") :z inc)})
+                       {:continue true :data (update (assoc % :fn "cont") :z inc)}
+                       {:continue false :data (update (assoc % :fn "stop") :z inc)})
             (assoc :a 1)
             (assoc :b 2)
             (assoc :c 3)
@@ -625,8 +625,8 @@ evaluation of the last form.
 
 ;; stops after 3rd form
 (stop-mod-> {:z 0} #(if (contains? % :c)
-                       {:continue true :data (update (assoc % :fn "stop") :z inc)}
-                       {:continue false :data (update (assoc % :fn "cont") :z inc)})
+                       {:continue true :data (update (assoc % :fn "cont") :z inc)}
+                       {:continue false :data (update (assoc % :fn "stop") :z inc)})
             (assoc :a 1)
             (assoc :b 2)
             (assoc :c 3)
@@ -635,9 +635,9 @@ evaluation of the last form.
 ;;=> {:z 3 :a 1 :b 2 :c 3 :fn "stop"}
 
 ;; no forms defined so returns 'x'; the 'stop-fn' function is irrelevant
-(stop-mod-> {:z 0} #((if (not (contains? % :c))
-                        {:continue true :data (update (assoc % :fn "stop") :z inc)}
-                        {:continue false :data (update (assoc % :fn "cont") :z inc)}))) 
+(stop-mod-> {:z 0} #((if (not (contains? % :z))
+                        {:continue true :data (update (assoc % :fn "cont") :z inc)}
+                        {:continue false :data (update (assoc % :fn "stop") :z inc)}))) 
 ;;=> {:z 0}
 ```
 
@@ -685,6 +685,67 @@ the last form.
 ;; no forms defined so returns 'x'; the 'stop-fn' function is irrelevant
 (stop->> "xyz" #())
 ;;=> "xyz"
+```
+
+
+### stop-mod-as->
+
+```clojure
+(stop-mod-as> expr name stop-mod-fn & forms)
+```
+
+A macro to thread in an arbitrary position:  modify the result with the evaluation function, and stop if it
+indicates `true`.
+
+Threads the expression `expr` through the forms `forms`. Binds `name` to `expr` in the first form, making a list of it
+if it is not a list already.  Passes the result of the `stop-mod-fn`, which takes exactly one argument:  the
+output from the evaluation of the current form.  The `stop-mod-fn` must return a map with key `:result` set to the
+data, either modified or not, and key `:stop` to `false` to not pass the result to next from and return the result
+else `true` to continue and pass the item `:data` to the next form by binding `name` to the result from the first form.
+And so on until there are no more forms.  The `stop-mod-fn` is not called if there are no forms; it is always
+called on the result from the evaluation of the last form.
+
+```clojure
+;; test helper
+(defn assoc-map-last
+  "Performs 'assoc', but puts the map last.  For testing."
+  [key val map]
+  (assoc map key val))
+
+;; test helper
+(defn assoc-map-middle
+  "Performs 'assoc', but puts the map in the middle.  For testing."
+  [key map val]
+  (assoc map key val))
+
+
+;; continues through all forms
+(stop-mod-as> {:z 0} x #(if (contains? % :k)
+                          {:stop true :data (update (assoc % :fn "stop") :z inc)}
+                          {:stop false :data (update (assoc % :fn "cont") :z inc)})
+              (assoc x :a 1)
+              (assoc-map-middle :b x 2)
+              (assoc-map-last :c 3 x)
+              (assoc x :d 4)
+              (assoc x :e 5))
+;;=> {:z 5 :a 1 :b 2 :c 3 :d 4 :e 5 :fn "cont"}
+
+;; stops after 3rd form
+(stop-mod-as> {:z 0} x #(if (contains? % :c)
+                          {:stop true :data (update (assoc % :fn "stop") :z inc)}
+                          {:continue false :data (update (assoc % :fn "cont") :z inc)})
+              (assoc x :a 1)
+              (assoc-map-middle :b x 2)
+              (assoc-map-last :c 3 x)
+              (assoc x :d 4)
+              (assoc x :e 5))
+;;=> {:z 3 :a 1 :b 2 :c 3 :fn "stop"}
+
+;; no forms defined so returns 'x'; the 'continue-fn' function is irrelevant
+(stop-mod-as> {:z 0} x #((if (not (contains? % :c))
+                           {:stop true :data (update (assoc % :fn "stop") :z inc)}
+                           {:stop false :data (update (assoc % :fn "cont") :z inc)}))) 
+;;=> {:z 0}
 ```
 
 # License
