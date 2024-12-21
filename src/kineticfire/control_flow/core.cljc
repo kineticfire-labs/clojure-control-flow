@@ -473,3 +473,44 @@
             (recur threaded-let prev-stop-mod-fn-result remaining-forms))
           threaded)))
     x))
+
+
+(defmacro stop-mod-as->
+  "A macro to thread in an arbitrary position:  modify the result with the evaluation function, and stop if it
+  indicates 'true'.
+
+  Threads the expression `expr` through the forms `forms`. Binds `name` to `expr` in the first form, making a list of it
+  if it is not a list already.  Passes the result of the `stop-mod-fn`, which takes exactly one argument:  the
+  output from the evaluation of the current form.  The `stop-mod-fn` must return a map with key ':result' set to the
+  data, either modified or not, and key ':stop' to 'false' to not pass the result to next from and return the result
+  else 'true' to continue and pass the item ':data' to the next form by binding `name` to the result from the first form.
+  And so on until there are no more forms.  The `stop-mod-fn` is not called if there are no forms; it is always
+  called on the result from the evaluation of the last form."
+  [expr name stop-mod-fn & forms]
+  (if forms
+    (let [original-val expr]
+      (loop [threaded nil
+             continue-mod-fn-result (gensym)
+             forms forms]
+        (if forms
+          (let [form (last forms)
+                remaining-forms (butlast forms)
+                prev-stop-mod-fn-result (if (seq? remaining-forms)
+                                          (gensym)
+                                          original-val)
+                prev-val (if (seq? remaining-forms)
+                           `(~:data ~prev-stop-mod-fn-result)
+                           prev-stop-mod-fn-result)
+                threaded-let (let [return-for-ok (if threaded
+                                                   threaded
+                                                   `(~:data ~continue-mod-fn-result))
+                                   form-result (gensym)]
+                               `(let [~name ~prev-val
+                                      ~form-result ~form
+                                      ~continue-mod-fn-result (~stop-mod-fn ~form-result)]
+                                  (if (~:stop ~continue-mod-fn-result)
+                                    (~:data ~continue-mod-fn-result)
+                                    ~return-for-ok)))]
+            (recur threaded-let prev-stop-mod-fn-result remaining-forms))
+          threaded)))
+    expr))

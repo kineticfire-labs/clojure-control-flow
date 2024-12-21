@@ -1065,3 +1065,102 @@
                             (str "s"))]
       (is (string? v))
       (is (= v "-s+t+u+v+wxyz")))))
+
+
+(deftest stop-mod-as->test
+  (testing "stop-mod-as->: no forms, would continue (shouldn't call fn if no forms)"
+    (let [v (cf/stop-mod-as-> {:z 0} x #(if (contains? % :k)
+                                          {:stop true :data (update (assoc % :fn "stop") :z inc)}
+                                          {:stop false :data (update (assoc % :fn "cont") :z inc)}))]
+      (is (map? v))
+      (is (= v {:z 0}))))
+  (testing "stop-mod-as->: no forms, wouldn't continue (shouldn't call fn if no forms)"
+    (let [v (cf/stop-mod-as-> {:z 0} x #(if (contains? % :z)
+                                          {:stop true :data (update (assoc % :fn "stop") :z inc)}
+                                          {:stop false :data (update (assoc % :fn "cont") :z inc)}))]
+      (is (map? v))
+      (is (= v {:z 0}))))
+  (testing "stop-mod-as->: one form, first arg, no stop"
+    (let [v (cf/stop-mod-as-> {:z 0} x #(if (contains? % :k)
+                                          {:stop true :data (update (assoc % :fn "stop") :z inc)}
+                                          {:stop false :data (update (assoc % :fn "cont") :z inc)})
+                              (assoc x :a 1))]
+      (is (map? v))
+      (is (= v {:z 1 :a 1 :fn "cont"}))))
+  (testing "stop-mod-as->: one form, middle arg, no stop"
+    (let [v (cf/stop-mod-as-> {:z 0} x #(if (contains? % :k)
+                                          {:stop true :data (update (assoc % :fn "stop") :z inc)}
+                                          {:stop false :data (update (assoc % :fn "cont") :z inc)})
+                              (assoc-map-middle :a x 1))]
+      (is (map? v))
+      (is (= v {:z 1 :a 1 :fn "cont"}))))
+  (testing "stop-mod-as->: one form, last arg, no stop"
+    (let [v (cf/stop-mod-as-> {:z 0} x #(if (contains? % :k)
+                                          {:stop true :data (update (assoc % :fn "stop") :z inc)}
+                                          {:stop false :data (update (assoc % :fn "cont") :z inc)})
+                              (assoc-map-last :a 1 x))]
+      (is (map? v))
+      (is (= v {:z 1 :a 1 :fn "cont"}))))
+  (testing "stop-mod-as->: two forms, no stop"
+    (let [v (cf/stop-mod-as-> {:z 0} x #(if (contains? % :k)
+                                          {:stop true :data (update (assoc % :fn "stop") :z inc)}
+                                          {:stop false :data (update (assoc % :fn "cont") :z inc)})
+                              (assoc x :a 1)
+                              (assoc x :b 2))]
+      (is (map? v))
+      (is (= v {:z 2 :a 1 :b 2 :fn "cont"}))))
+  (testing "stop-mod-as->: five forms, varying placement, fail on 1st"
+    (let [v (cf/stop-mod-as-> {:z 0} x #(if (contains? % :a)
+                                          {:stop true :data (update (assoc % :fn "stop") :z inc)}
+                                          {:stop false :data (update (assoc % :fn "cont") :z inc)})
+                              (assoc x :a 1)
+                              (assoc-map-middle :b x 2)
+                              (assoc-map-last :c 3 x)
+                              (assoc x :d 4)
+                              (assoc x :e 5))]
+      (is (map? v))
+      (is (= v {:z 1 :a 1 :fn "stop"}))))
+  (testing "stop-mod-as->: five forms, varying placement, fail on 2nd"
+    (let [v (cf/stop-mod-as-> {:z 0} x #(if (contains? % :b)
+                                          {:stop true :data (update (assoc % :fn "stop") :z inc)}
+                                          {:stop false :data (update (assoc % :fn "cont") :z inc)})
+                              (assoc x :a 1)
+                              (assoc-map-middle :b x 2)
+                              (assoc-map-last :c 3 x)
+                              (assoc x :d 4)
+                              (assoc x :e 5))]
+      (is (map? v))
+      (is (= v {:z 2 :a 1 :b 2 :fn "stop"}))))
+  (testing "stop-mod-as->: five forms, varying placement, fail on 3rd"
+    (let [v (cf/stop-mod-as-> {:z 0} x #(if (contains? % :c)
+                                          {:stop true :data (update (assoc % :fn "stop") :z inc)}
+                                          {:stop false :data (update (assoc % :fn "cont") :z inc)})
+                              (assoc x :a 1)
+                              (assoc-map-middle :b x 2)
+                              (assoc-map-last :c 3 x)
+                              (assoc x :d 4)
+                              (assoc x :e 5))]
+      (is (map? v))
+      (is (= v {:z 3 :a 1 :b 2 :c 3 :fn "stop"}))))
+  (testing "stop-mod-as->: five forms, varying placement, fail on 4th"
+    (let [v (cf/stop-mod-as-> {:z 0} x #(if (contains? % :d)
+                                          {:stop true :data (update (assoc % :fn "stop") :z inc)}
+                                          {:stop false :data (update (assoc % :fn "cont") :z inc)})
+                              (assoc x :a 1)
+                              (assoc-map-middle :b x 2)
+                              (assoc-map-last :c 3 x)
+                              (assoc x :d 4)
+                              (assoc x :e 5))]
+      (is (map? v))
+      (is (= v {:z 4 :a 1 :b 2 :c 3 :d 4 :fn "stop"}))))
+  (testing "stop-mod-as->: five forms, varying placement, fail on 5th"
+    (let [v (cf/stop-mod-as-> {:z 0} x #(if (contains? % :e)
+                                          {:stop true :data (update (assoc % :fn "stop") :z inc)}
+                                          {:stop false :data (update (assoc % :fn "cont") :z inc)})
+                              (assoc x :a 1)
+                              (assoc-map-middle :b x 2)
+                              (assoc-map-last :c 3 x)
+                              (assoc x :d 4)
+                              (assoc x :e 5))]
+      (is (map? v))
+      (is (= v {:z 5 :a 1 :b 2 :c 3 :d 4 :e 5 :fn "stop"})))))
