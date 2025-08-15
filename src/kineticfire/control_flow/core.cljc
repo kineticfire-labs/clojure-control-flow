@@ -20,6 +20,9 @@
 (ns kineticfire.control-flow.core
   (:gen-class))
 
+;;
+;; thread result of previous form
+;;
 
 (defmacro continue->
   "A macro to thread first:  continue if the evaluation function returns 'true'.
@@ -128,8 +131,7 @@
                                    original-val)
                 threaded-let (let [return-for-ok (if threaded
                                                    threaded
-                                                   form-result)
-                                   ]
+                                                   form-result)]
                                (if first-iteration
                                  `(let [~name ~prev-form-result
                                         ~form-result ~form]
@@ -514,3 +516,220 @@
             (recur threaded-let prev-stop-mod-fn-result remaining-forms))
           threaded)))
     expr))
+
+
+;;
+;; thread original value 'x'
+;;
+
+;; todo - doc
+(defmacro continue-x->
+  "A macro to thread first the original value only:  continue if the evaluation function returns boolean 'true'.
+
+  Threads the expression `x` through the forms `forms`. Inserts `x` as the second item in the first form, making a list
+  of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
+  then if the form returns boolean 'true' continues to the next form by passing `x` (NOT the result of the form) as the
+  second item in the next form until there are no forms, returning the result of the last form.  If a form returns
+  anything but boolean 'true', then that value is returned and no more forms are evaluated."
+  [x & forms]
+  (if forms
+    (let [original-val x]
+      (loop [threaded nil
+             first-iteration true
+             form-result (gensym)
+             forms forms]
+        (if forms
+          (let [form (last forms)
+                remaining-forms (butlast forms)
+                prev-form-result (if (seq? remaining-forms)
+                                   (gensym)
+                                   original-val)
+                threaded-let (let [return-for-ok (if threaded
+                                                   threaded
+                                                   form-result)
+                                   threaded-form (if (seq? form)
+                                                   (with-meta `(~(first form) ~prev-form-result ~@(next form)) (meta form))
+                                                   (list form prev-form-result))]
+                               (if first-iteration
+                                 `(let [~form-result ~threaded-form]
+                                    ~return-for-ok)
+                                 `(let [~form-result ~threaded-form]
+                                    (if (and
+                                          (boolean? ~form-result)
+                                          (true? ~form-result))
+                                      ~return-for-ok
+                                      ~form-result))))]
+            (recur threaded-let false prev-form-result remaining-forms))
+          threaded)))
+    x))
+
+
+;; todo - docs
+(defmacro continue-x->>
+  "A macro to thread last the original value only:  continue if the evaluation function returns boolean 'true'.
+
+  Threads the expression `x` through the forms `forms`. Inserts `x` as the last item in the first form, making a list
+  of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
+  then if the form returns boolean 'true' continues to the next form by passing `x` (NOT the result of the form) as the
+  last item in the next form until there are no forms, returning the result of the last form.  If a form returns
+  anything but boolean 'true', then that value is returned and no more forms are evaluated."
+  [x & forms]
+  (if forms
+    (let [original-val x]
+      (loop [threaded nil
+             first-iteration true
+             form-result (gensym)
+             forms forms]
+        (if forms
+          (let [form (last forms)
+                remaining-forms (butlast forms)
+                prev-form-result (if (seq? remaining-forms)
+                                   (gensym)
+                                   original-val)
+                threaded-let (let [return-for-ok (if threaded
+                                                   threaded
+                                                   form-result)
+                                   threaded-form (if (seq? form)
+                                                   (with-meta `(~(first form) ~@(next form) ~prev-form-result) (meta form))
+                                                   (list form prev-form-result))]
+                               (if first-iteration
+                                 `(let [~form-result ~threaded-form]
+                                    ~return-for-ok)
+                                 `(let [~form-result ~threaded-form]
+                                    (if (and
+                                          (boolean? ~form-result)
+                                          (true? ~form-result))
+                                      ~return-for-ok
+                                      ~form-result))))]
+            (recur threaded-let false prev-form-result remaining-forms))
+          threaded)))
+    x))
+
+
+;; todo - docs
+(defmacro continue-x-as->
+  "A macro to thread in an arbitrary position the original value only:  continue if the evaluation function returns
+  boolean 'true'.
+
+  Threads the expression `expr` through the forms `forms`. Binds `name` to `expr` in the first form, making a list
+  of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
+  then applies the `expr` (NOT the output of the form) to the next form by binding `name` to `expr` and so on until no
+  forms remain so long as each form returns boolean 'true'.  If a form returns anything other than boolean 'true', then
+  that result is returned and the evaluation of forms stops."
+  [expr name & forms]
+  (if forms
+    (let [original-val expr]
+      (loop [threaded nil
+             first-iteration true
+             form-result (gensym)
+             forms forms]
+        (if forms
+          (let [form (last forms)
+                remaining-forms (butlast forms)
+                prev-form-result (if (seq? remaining-forms)
+                                   (gensym)
+                                   original-val)
+                threaded-let (let [return-for-ok (if threaded
+                                                   threaded
+                                                   form-result)]
+                               (if first-iteration
+                                 `(let [~name ~prev-form-result
+                                        ~form-result ~form]
+                                    ~return-for-ok)
+                                 `(let [~name ~prev-form-result
+                                        ~form-result ~form]
+                                    (if (and
+                                          (boolean? ~form-result)
+                                          (true? ~form-result))
+                                      ~return-for-ok
+                                      ~form-result))))]
+            (recur threaded-let false prev-form-result remaining-forms))
+          threaded)))
+    expr))
+
+
+;; todo - doc
+(defmacro stop-x->
+  "A macro to thread first the original value only:  stop if the evaluation function returns anything other than boolean
+  'false'.
+
+  Threads the expression `x` through the forms `forms`. Inserts `x` as the second item in the first form, making a list
+  of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
+  then passes `x` (NOT the result of the form) to the next form and so on until there are no more forms, returning
+  the result of the last form.  If a form returns anything except boolean 'false', then stops evaluating forms and
+  returns that result."
+  [x & forms]
+  (if forms
+    (let [original-val x]
+      (loop [threaded nil
+             first-iteration true
+             form-result (gensym)
+             forms forms]
+        (if forms
+          (let [form (last forms)
+                remaining-forms (butlast forms)
+                prev-form-result (if (seq? remaining-forms)
+                                   (gensym)
+                                   original-val)
+                threaded-let (let [return-for-ok (if threaded
+                                                   threaded
+                                                   form-result)
+                                   threaded-form (if (seq? form)
+                                                   (with-meta `(~(first form) ~prev-form-result ~@(next form)) (meta form))
+                                                   (list form prev-form-result))]
+                               (if first-iteration
+                                 `(let [~form-result ~threaded-form]
+                                    ~return-for-ok)
+                                 `(let [~form-result ~threaded-form]
+                                    (if (and
+                                          (boolean? ~form-result)
+                                          (false? ~form-result))
+                                      ~return-for-ok
+                                      ~form-result))))]
+            (recur threaded-let false prev-form-result remaining-forms))
+          threaded)))
+    x))
+
+
+
+;; todo - docs
+(defmacro stop-x->>
+  "A macro to thread last the original value only:  stop if the evaluation function returns anything other than boolean
+  'false'.
+
+  Threads the expression `x` through the forms `forms`. Inserts `x` as the last item in the first form, making a list
+  of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
+  then passes `x` (NOT the result of the form) to the next form and so on until there are no more forms, returning
+  the result of the last form.  If a form returns anything except boolean 'false', then stops evaluating forms and
+  returns that result."
+  [x & forms]
+  (if forms
+    (let [original-val x]
+      (loop [threaded nil
+             first-iteration true
+             form-result (gensym)
+             forms forms]
+        (if forms
+          (let [form (last forms)
+                remaining-forms (butlast forms)
+                prev-form-result (if (seq? remaining-forms)
+                                   (gensym)
+                                   original-val)
+                threaded-let (let [return-for-ok (if threaded
+                                                   threaded
+                                                   form-result)
+                                   threaded-form (if (seq? form)
+                                                   (with-meta `(~(first form) ~@(next form) ~prev-form-result) (meta form))
+                                                   (list form prev-form-result))]
+                               (if first-iteration
+                                 `(let [~form-result ~threaded-form]
+                                    ~return-for-ok)
+                                 `(let [~form-result ~threaded-form]
+                                    (if (and
+                                          (boolean? ~form-result)
+                                          (false? ~form-result))
+                                      ~return-for-ok
+                                      ~form-result))))]
+            (recur threaded-let false prev-form-result remaining-forms))
+          threaded)))
+    x))
