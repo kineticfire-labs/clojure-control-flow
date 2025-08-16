@@ -30,7 +30,6 @@
 
 (defn provide-last
   [_ ret]
-  (println "input: " _)
   ret)
 
 
@@ -1191,37 +1190,37 @@
 
 
 (deftest continue-x->test
-  ;(testing "continue-x->: no forms"
-  ;  (let [actual (cf/continue-x-> "hello")]
-  ;    (is (= actual "hello"))))
-  ;(testing "continue-x->: one form, true"
-  ;  (let [actual (cf/continue-x-> "hello"
-  ;                                (provide-last true))]
-  ;    (is (boolean? actual))
-  ;    (is (true? actual))))
-  ;(testing "continue-x->: one form, fail"
-  ;  (let [actual (cf/continue-x-> "hello"
-  ;                                (provide-last "err"))]
-  ;    (is (= actual "err"))))
-  ;(testing "continue-x->: multiple forms, true"
-  ;  (let [actual (cf/continue-x-> "hello"
-  ;                                (provide-last true)
-  ;                                (provide-last true)
-  ;                                (provide-last true))]
-  ;    (is (boolean? actual))
-  ;    (is (true? actual))))
-  ;(testing "continue-x->: test fail on first"
-  ;  (let [actual (cf/continue-x-> "hello"
-  ;                                (provide-last {:reason "a"})
-  ;                                (provide-last {:reason "b"})
-  ;                                (provide-last {:reason "c"}))]
-  ;    (is (= actual {:reason "a"}))))
-  ;(testing "continue-x->: test fail on second"
-  ;  (let [actual (cf/continue-x-> "hello"
-  ;                                (provide-last true)
-  ;                                (provide-last {:reason "b"})
-  ;                                (provide-last {:reason "c"}))]
-  ;    (is (= actual {:reason "b"}))))
+  (testing "continue-x->: no forms"
+    (let [actual (cf/continue-x-> "hello")]
+      (is (= actual "hello"))))
+  (testing "continue-x->: one form, true"
+    (let [actual (cf/continue-x-> "hello"
+                                  (provide-last true))]
+      (is (boolean? actual))
+      (is (true? actual))))
+  (testing "continue-x->: one form, fail"
+    (let [actual (cf/continue-x-> "hello"
+                                  (provide-last "err"))]
+      (is (= actual "err"))))
+  (testing "continue-x->: multiple forms, true"
+    (let [actual (cf/continue-x-> "hello"
+                                  (provide-last true)
+                                  (provide-last true)
+                                  (provide-last true))]
+      (is (boolean? actual))
+      (is (true? actual))))
+  (testing "continue-x->: test fail on first"
+    (let [actual (cf/continue-x-> "hello"
+                                  (provide-last {:reason "a"})
+                                  (provide-last {:reason "b"})
+                                  (provide-last {:reason "c"}))]
+      (is (= actual {:reason "a"}))))
+  (testing "continue-x->: test fail on second"
+    (let [actual (cf/continue-x-> "hello"
+                                  (provide-last true)
+                                  (provide-last {:reason "b"})
+                                  (provide-last {:reason "c"}))]
+      (is (= actual {:reason "b"}))))
   (testing "continue-x->: test fail on last"
     (let [actual (cf/continue-x-> "hello"
                                   (provide-last true)
@@ -1230,160 +1229,205 @@
       (is (= actual {:reason "c"})))))
 
 
-;(deftest continue-x->>test
-;  (testing "continue-x->>: no forms"
-;    (let [actual (cf/continue-x->> "hello")]
-;      (is (= actual "hello"))))
-;  (testing "continue-x->>: one form, true"
-;    (let [actual (cf/continue-x->> "hello"
-;                                   (provide-first true))]
-;      (is (boolean? actual))
-;      (is (true? actual))))
-;  (testing "continue-x->>: one form, fail"
-;    (let [actual (cf/continue-x->> "hello"
-;                                   (provide-first "err"))]
-;      (is (= actual "err"))))
-;  (testing "continue-x->>: multiple forms, true"
-;    (let [actual (cf/continue-x->> "hello"
-;                                   (provide-first true)
-;                                   (provide-first true)
-;                                   (provide-first true))]
-;      (is (boolean? actual))
-;      (is (true? actual))))
-;  (testing "continue-x->>: test fail on first"
-;    (let [actual (cf/continue-x->> "hello"
-;                                   (provide-first {:reason "a"})
-;                                   (provide-first {:reason "b"})
-;                                   (provide-first {:reason "c"}))]
-;      (is (= actual {:reason "a"}))))
-;  (testing "continue-x->>: test fail on second"
-;    (let [actual (cf/continue-x->> "hello"
-;                                   (provide-first true)
-;                                   (provide-first {:reason "b"})
-;                                   (provide-first {:reason "c"}))]
-;      (is (= actual {:reason "b"}))))
-;  (testing "continue-x->>: test fail on last"
-;    (let [actual (cf/continue-x->> "hello"
-;                                   (provide-first true)
-;                                   (provide-first true)
-;                                   (provide-first {:reason "c"}))]
-;      (is (= actual {:reason "c"})))))
+(deftest continue-x->>test
+  (testing "continue-x->>: no forms"
+    (let [actual (cf/continue-x->> "hello")]
+      (is (= actual "hello"))))
+  (testing "continue-x->>: one form, true"
+    (let [actual (cf/continue-x->> "hello"
+                                   (provide-first true))]
+      (is (boolean? actual))
+      (is (true? actual))))
+  (testing "continue-x->>: one form, fail"
+    (let [actual (cf/continue-x->> "hello"
+                                   (provide-first "err"))]
+      (is (= actual "err"))))
+  (testing "continue-x->>: multiple forms, true"
+    (let [actual (cf/continue-x->> "hello"
+                                   (provide-first true)
+                                   (provide-first true)
+                                   (provide-first true))]
+      (is (boolean? actual))
+      (is (true? actual))))
+  (testing "continue-x->>: test fail on first"
+    (let [actual (cf/continue-x->> "hello"
+                                   (provide-first {:reason "a"})
+                                   (provide-first {:reason "b"})
+                                   (provide-first {:reason "c"}))]
+      (is (= actual {:reason "a"}))))
+  (testing "continue-x->>: test fail on second"
+    (let [actual (cf/continue-x->> "hello"
+                                   (provide-first true)
+                                   (provide-first {:reason "b"})
+                                   (provide-first {:reason "c"}))]
+      (is (= actual {:reason "b"}))))
+  (testing "continue-x->>: test fail on last"
+    (let [actual (cf/continue-x->> "hello"
+                                   (provide-first true)
+                                   (provide-first true)
+                                   (provide-first {:reason "c"}))]
+      (is (= actual {:reason "c"})))))
 
 
-;; todo
-;(deftest continue-x-as->test
-;  (testing "continue-x-as->: no forms"
-;    (let [actual (cf/continue-x-as-> {:z 0} x)]
-;      (is (map? actual))
-;      (is (= actual {:z 0}))))
-;  (testing "continue-x-as->: one form, first arg, continue"
-;    (let [actual (cf/continue-x-as-> {:z 0} x
-;                                (provide-first true x))]
-;      (is (boolean? actual))
-;      (is (true? actual))))
-;  (testing "continue-x-as->: one form, last arg, continue"
-;    (let [actual (cf/continue-x-as-> {:z 0} x
-;                                (provide-last x true))]
-;      (is (boolean? actual))
-;      (is (true? actual))))
-;  (testing "continue-x-as->: one form, first arg, continue"
-;    (let [actual (cf/continue-x-as-> {:z 0} x
-;                                     (assoc x :a 1))]
-;      (is (map? actual))
-;      (is (= actual {:z 0 :a 1}))))
-;  (testing "continue-x-as->: return 1st form result"
-;    (let [actual (cf/continue-x-as-> {:z 0} x
-;                                     (assoc-map-middle :a x 1)
-;                                     (assoc-map-middle :b x 2)
-;                                     (assoc-map-middle :c x 3))]
-;      (is (map? actual))
-;      (is (= actual {:z 0 :a 1}))))
-;  (testing "continue-x-as->: return 2nd form result"
-;    (let [actual (cf/continue-x-as-> {:z 0} x
-;                                     (provide-last x true)
-;                                     (assoc-map-middle :b x 2)
-;                                     (assoc-map-middle :c x 3))]
-;      (println "result " actual)
-;      (is (map? actual))
-;      (is (= actual {:z 0 :b 2}))))
-;  )
+(deftest continue-x-as->test
+  (testing "continue-x-as->: no forms"
+    (let [actual (cf/continue-x-as-> {:z 0} x)]
+      (is (map? actual))
+      (is (= actual {:z 0}))))
+  (testing "continue-x-as->: one form, first arg, continue"
+    (let [actual (cf/continue-x-as-> {:z 0} x
+                                (provide-first true x))]
+      (is (boolean? actual))
+      (is (true? actual))))
+  (testing "continue-x-as->: one form, last arg, continue"
+    (let [actual (cf/continue-x-as-> {:z 0} x
+                                (provide-last x true))]
+      (is (boolean? actual))
+      (is (true? actual))))
+  (testing "continue-x-as->: one form, first arg, continue"
+    (let [actual (cf/continue-x-as-> {:z 0} x
+                                     (assoc x :a 1))]
+      (is (map? actual))
+      (is (= actual {:z 0 :a 1}))))
+  (testing "continue-x-as->: return 1st form result"
+    (let [actual (cf/continue-x-as-> {:z 0} x
+                                     (assoc-map-middle :a x 1)
+                                     (assoc-map-middle :b x 2)
+                                     (assoc-map-middle :c x 3))]
+      (is (map? actual))
+      (is (= actual {:z 0 :a 1}))))
+  (testing "continue-x-as->: return 2nd form result"
+    (let [actual (cf/continue-x-as-> {:z 0} x
+                                     (provide-last x true)
+                                     (assoc-map-middle :b x 2)
+                                     (assoc-map-middle :c x 3))]
+      (is (map? actual))
+      (is (= actual {:z 0 :b 2}))))
+  (testing "continue-x-as->: return last form result"
+    (let [actual (cf/continue-x-as-> {:z 0} x
+                                     (provide-last x true)
+                                     (provide-last x true)
+                                     (assoc-map-middle :c x 3))]
+      (is (map? actual))
+      (is (= actual {:z 0 :c 3})))))
 
 
-;(deftest stop-x->test
-;  (testing "stop-x->: no forms"
-;    (let [actual (cf/stop-x-> "hello")]
-;      (is (= actual "hello"))))
-;  (testing "stop-x->: one form, stop"
-;    (let [actual (cf/stop-x-> "hello"
-;                              (provide-last "a"))]
-;      (is (= actual "a"))))
-;  (testing "stop-x->: one form, no stop"
-;    (let [actual (cf/stop-x-> "hello"
-;                              (provide-last false))]
-;      (is (boolean? actual))
-;      (is (false? actual))))
-;  (testing "stop-x->: multiple forms, no stop"
-;    (let [actual (cf/stop-x-> "hello"
-;                              (provide-last false)
-;                              (provide-last false)
-;                              (provide-last false))]
-;      (is (boolean? actual))
-;      (is (false? actual))))
-;  (testing "stop-x->: test stop on first"
-;    (let [actual (cf/stop-x-> "hello"
-;                              (provide-last {:reason "a"})
-;                              (provide-last {:reason "b"})
-;                              (provide-last {:reason "c"}))]
-;      (is (= actual {:reason "a"}))))
-;  (testing "stop-x->: test fail on second"
-;    (let [actual (cf/stop-x-> "hello"
-;                              (provide-last false)
-;                              (provide-last {:reason "b"})
-;                              (provide-last {:reason "c"}))]
-;      (is (= actual {:reason "b"}))))
-;  (testing "stop-x->: test fail on last"
-;    (let [actual (cf/stop-x-> "hello"
-;                              (provide-last false)
-;                              (provide-last false)
-;                              (provide-last {:reason "c"}))]
-;      (is (= actual {:reason "c"})))))
+(deftest stop-x->test
+  (testing "stop-x->: no forms"
+    (let [actual (cf/stop-x-> "hello")]
+      (is (= actual "hello"))))
+  (testing "stop-x->: one form, stop"
+    (let [actual (cf/stop-x-> "hello"
+                              (provide-last "a"))]
+      (is (= actual "a"))))
+  (testing "stop-x->: one form, no stop"
+    (let [actual (cf/stop-x-> "hello"
+                              (provide-last false))]
+      (is (boolean? actual))
+      (is (false? actual))))
+  (testing "stop-x->: multiple forms, no stop"
+    (let [actual (cf/stop-x-> "hello"
+                              (provide-last false)
+                              (provide-last false)
+                              (provide-last false))]
+      (is (boolean? actual))
+      (is (false? actual))))
+  (testing "stop-x->: test stop on first"
+    (let [actual (cf/stop-x-> "hello"
+                              (provide-last {:reason "a"})
+                              (provide-last {:reason "b"})
+                              (provide-last {:reason "c"}))]
+      (is (= actual {:reason "a"}))))
+  (testing "stop-x->: test fail on second"
+    (let [actual (cf/stop-x-> "hello"
+                              (provide-last false)
+                              (provide-last {:reason "b"})
+                              (provide-last {:reason "c"}))]
+      (is (= actual {:reason "b"}))))
+  (testing "stop-x->: test fail on last"
+    (let [actual (cf/stop-x-> "hello"
+                              (provide-last false)
+                              (provide-last false)
+                              (provide-last {:reason "c"}))]
+      (is (= actual {:reason "c"})))))
 
 
-;(deftest stop-x->>test
-;  (testing "stop-x->>: no forms"
-;    (let [actual (cf/stop-x->> "hello")]
-;      (is (= actual "hello"))))
-;  (testing "stop-x->>: one form, stop"
-;    (let [actual (cf/stop-x->> "hello"
-;                               (provide-first "a"))]
-;      (is (= actual "a"))))
-;  (testing "stop-x->: one form, no stop"
-;    (let [actual (cf/stop-x->> "hello"
-;                               (provide-first false))]
-;      (is (boolean? actual))
-;      (is (false? actual))))
-;  (testing "stop-x->>: multiple forms, no stop"
-;    (let [actual (cf/stop-x->> "hello"
-;                               (provide-first false)
-;                               (provide-first false)
-;                               (provide-first false))]
-;      (is (boolean? actual))
-;      (is (false? actual))))
-;  (testing "stop-x->>: test stop on first"
-;    (let [actual (cf/stop-x->> "hello"
-;                               (provide-first {:reason "a"})
-;                               (provide-first {:reason "b"})
-;                               (provide-first {:reason "c"}))]
-;      (is (= actual {:reason "a"}))))
-;  (testing "stop-x->>: test fail on second"
-;    (let [actual (cf/stop-x->> "hello"
-;                               (provide-first false)
-;                               (provide-first {:reason "b"})
-;                               (provide-first {:reason "c"}))]
-;      (is (= actual {:reason "b"}))))
-;  (testing "stop-x->>: test fail on last"
-;    (let [actual (cf/stop-x->> "hello"
-;                               (provide-first false)
-;                               (provide-first false)
-;                               (provide-first {:reason "c"}))]
-;      (is (= actual {:reason "c"})))))
+(deftest stop-x->>test
+  (testing "stop-x->>: no forms"
+    (let [actual (cf/stop-x->> "hello")]
+      (is (= actual "hello"))))
+  (testing "stop-x->>: one form, stop"
+    (let [actual (cf/stop-x->> "hello"
+                               (provide-first "a"))]
+      (is (= actual "a"))))
+  (testing "stop-x->: one form, no stop"
+    (let [actual (cf/stop-x->> "hello"
+                               (provide-first false))]
+      (is (boolean? actual))
+      (is (false? actual))))
+  (testing "stop-x->>: multiple forms, no stop"
+    (let [actual (cf/stop-x->> "hello"
+                               (provide-first false)
+                               (provide-first false)
+                               (provide-first false))]
+      (is (boolean? actual))
+      (is (false? actual))))
+  (testing "stop-x->>: test stop on first"
+    (let [actual (cf/stop-x->> "hello"
+                               (provide-first {:reason "a"})
+                               (provide-first {:reason "b"})
+                               (provide-first {:reason "c"}))]
+      (is (= actual {:reason "a"}))))
+  (testing "stop-x->>: test fail on second"
+    (let [actual (cf/stop-x->> "hello"
+                               (provide-first false)
+                               (provide-first {:reason "b"})
+                               (provide-first {:reason "c"}))]
+      (is (= actual {:reason "b"}))))
+  (testing "stop-x->>: test fail on last"
+    (let [actual (cf/stop-x->> "hello"
+                               (provide-first false)
+                               (provide-first false)
+                               (provide-first {:reason "c"}))]
+      (is (= actual {:reason "c"})))))
+
+
+(deftest stop-x-as->test
+  (testing "stop-x-as->: no forms"
+    (let [actual (cf/stop-x-as-> {:z 0} x )]
+      (is (map? actual))
+      (is (= actual {:z 0}))))
+  (testing "stop-x-as->: one form, stop"
+    (let [actual (cf/stop-x-as-> {:z 0} x
+                            (provide-first "a" x))]
+      (is (= actual "a"))))
+  (testing "stop-x-as->: one form, stop"
+    (let [actual (cf/stop-x-as-> {:z 0} x
+                            (provide-first false x))]
+      (is (boolean? actual))
+      (is (false? actual))))
+  (testing "stop-x-as->: multiple forms, no stop"
+    (let [actual (cf/stop-x-as-> {:z 0} x
+                                 (provide-first false x)
+                                 (provide-last x false)
+                                 (provide-first false x))]
+      (is (boolean? actual))
+      (is (false? actual))))
+  (testing "stop-x-as->: multiple forms, stop on first"
+    (let [actual (cf/stop-x-as-> {:z 0} x
+                                 (provide-first {:reason "a"} x)
+                                 (provide-last x false)
+                                 (provide-first false x))]
+      (is (= actual {:reason "a"}))))
+  (testing "stop-x-as->: multiple forms, stop on second"
+    (let [actual (cf/stop-x-as-> {:z 0} x
+                                 (provide-last x false)
+                                 (provide-first {:reason "b"} x)
+                                 (provide-first false x))]
+      (is (= actual {:reason "b"}))))
+  (testing "stop-x-as->: multiple forms, stop on second"
+    (let [actual (cf/stop-x-as-> {:z 0} x
+                                 (provide-last x false)
+                                 (provide-last x false)
+                                 (provide-first {:reason "c"} x))]
+      (is (= actual {:reason "c"})))))

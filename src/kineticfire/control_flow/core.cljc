@@ -522,7 +522,7 @@
 ;; thread original value 'x'
 ;;
 
-;; todo - doc
+
 (defmacro continue-x->
   "A macro to thread first the original value only:  continue if the evaluation function returns boolean 'true'.
 
@@ -548,8 +548,8 @@
                                                    threaded
                                                    form-result)
                                    threaded-form (if (seq? form)
-                                                   (with-meta `(~(first form) ~prev-form-result ~@(next form)) (meta form))
-                                                   (list form prev-form-result))]
+                                                   (with-meta `(~(first form) ~x ~@(next form)) (meta form))
+                                                   (list form x))]
                                (if first-iteration
                                  `(let [~form-result ~threaded-form]
                                     ~return-for-ok)
@@ -564,7 +564,6 @@
     x))
 
 
-;; todo - docs
 (defmacro continue-x->>
   "A macro to thread last the original value only:  continue if the evaluation function returns boolean 'true'.
 
@@ -590,8 +589,8 @@
                                                    threaded
                                                    form-result)
                                    threaded-form (if (seq? form)
-                                                   (with-meta `(~(first form) ~@(next form) ~prev-form-result) (meta form))
-                                                   (list form prev-form-result))]
+                                                   (with-meta `(~(first form) ~@(next form) ~x) (meta form))
+                                                   (list form x))]
                                (if first-iteration
                                  `(let [~form-result ~threaded-form]
                                     ~return-for-ok)
@@ -606,7 +605,6 @@
     x))
 
 
-;; todo - docs
 (defmacro continue-x-as->
   "A macro to thread in an arbitrary position the original value only:  continue if the evaluation function returns
   boolean 'true'.
@@ -633,10 +631,10 @@
                                                    threaded
                                                    form-result)]
                                (if first-iteration
-                                 `(let [~name ~prev-form-result
+                                 `(let [~name ~original-val
                                         ~form-result ~form]
                                     ~return-for-ok)
-                                 `(let [~name ~prev-form-result
+                                 `(let [~name ~original-val
                                         ~form-result ~form]
                                     (if (and
                                           (boolean? ~form-result)
@@ -648,7 +646,6 @@
     expr))
 
 
-;; todo - doc
 (defmacro stop-x->
   "A macro to thread first the original value only:  stop if the evaluation function returns anything other than boolean
   'false'.
@@ -675,8 +672,8 @@
                                                    threaded
                                                    form-result)
                                    threaded-form (if (seq? form)
-                                                   (with-meta `(~(first form) ~prev-form-result ~@(next form)) (meta form))
-                                                   (list form prev-form-result))]
+                                                   (with-meta `(~(first form) ~x ~@(next form)) (meta form))
+                                                   (list form x))]
                                (if first-iteration
                                  `(let [~form-result ~threaded-form]
                                     ~return-for-ok)
@@ -691,8 +688,6 @@
     x))
 
 
-
-;; todo - docs
 (defmacro stop-x->>
   "A macro to thread last the original value only:  stop if the evaluation function returns anything other than boolean
   'false'.
@@ -719,8 +714,8 @@
                                                    threaded
                                                    form-result)
                                    threaded-form (if (seq? form)
-                                                   (with-meta `(~(first form) ~@(next form) ~prev-form-result) (meta form))
-                                                   (list form prev-form-result))]
+                                                   (with-meta `(~(first form) ~@(next form) ~x) (meta form))
+                                                   (list form x))]
                                (if first-iteration
                                  `(let [~form-result ~threaded-form]
                                     ~return-for-ok)
@@ -733,3 +728,43 @@
             (recur threaded-let false prev-form-result remaining-forms))
           threaded)))
     x))
+
+
+(defmacro stop-x-as->
+  "A macro to thread in an arbitrary position the original value only:  stop if the evaluation function returns anything
+  other than boolean 'false'.
+
+  Threads the expression `expr` through the forms `forms`. Binds `name` to `expr` in the first form, making a list
+  of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
+  then passes to those forms the original value `expr` until there are no forms or until a function returns anything
+  other than boolean 'false'."
+  [expr name & forms]
+  (if forms
+    (let [original-val expr]
+      (loop [threaded nil
+             first-iteration true
+             form-result (gensym)
+             forms forms]
+        (if forms
+          (let [form (last forms)
+                remaining-forms (butlast forms)
+                prev-form-result (if (seq? remaining-forms)
+                                   (gensym)
+                                   original-val)
+                threaded-let (let [return-for-ok (if threaded
+                                                   threaded
+                                                   form-result)]
+                               (if first-iteration
+                                 `(let [~name ~original-val
+                                        ~form-result ~form]
+                                    ~return-for-ok)
+                                 `(let [~name ~original-val
+                                        ~form-result ~form]
+                                    (if (and
+                                          (boolean? ~form-result)
+                                          (false? ~form-result))
+                                      ~return-for-ok
+                                      ~form-result))))]
+            (recur threaded-let false prev-form-result remaining-forms))
+          threaded)))
+    expr))
