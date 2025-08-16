@@ -17,7 +17,7 @@
 ;;	   project site: https://github.com/kineticfire-labs/clojure-control-flow/
 
 
-(defproject com.kineticfire/control-flow "1.1.0-SNAPSHOT"
+(defproject com.kineticfire/control-flow "1.1.0"
   :description "Clojure/ClojureScript/Babashka utilities for control flow mechanisms"
   :url "https://github.com/kineticfire-labs/clojure-control-flow/"
   :license {:name "Apache License, Version 2.0"
