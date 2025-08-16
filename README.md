@@ -106,7 +106,7 @@ implementation("com.kineticfire:control-flow:1.1.0")
 <dependency>
   <groupId>com.kineticfire</groupId>
   <artifactId>control-flow</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
 </dependency>
 ```
 
