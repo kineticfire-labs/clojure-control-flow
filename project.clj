@@ -22,8 +22,8 @@
   :url "https://github.com/kineticfire-labs/clojure-control-flow/"
   :license {:name "Apache License, Version 2.0"
             :url "https://www.apache.org/licenses/LICENSE-2.0"}
-  :dependencies [[org.clojure/clojure "1.12.0"]
-                 [org.clojure/clojurescript "1.11.132"]]
+  :dependencies [[org.clojure/clojure "1.12.1"]
+                 [org.clojure/clojurescript "1.12.42"]]
   :plugins [[lein-cljsbuild "1.1.8"]]
   :cljsbuild {:builds [{:id "main"
                         :source-paths ["src"]
