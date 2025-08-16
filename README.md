@@ -69,13 +69,13 @@ Figure 2.
 <p align="center">Figure 2 -- Data Validation Code Kept More Linear with <em>clojure-control-flow</em></p>
 
 The example in Figure 2 uses the `continue->` macro from *clojure-control-flow*, which is similar to `->` in 
-Clojure.core which threads the first argument through the forms as the second item; unlike `->`, `stop->` accepts a 
+Clojure.core which threads the first argument through the forms as the second item; unlike `->`, `continue->` accepts a 
 function that determines if the threading process should continue at each step.  The function accepts one argument--the 
 result of evaluating the current form--and returns `true` to continue the process or `false` to stop.
 
 The *clojure-control-flow* library provides functionality to keep code more linear and readable for this and other such
-scenarios.  The library operates on and returns basic data structures and is not limited to a specific usage domain
-(e.g., data validation), which make it broadly applicable.
+scenarios.  The library operates on and returns basic data types and is not limited to a specific usage domain (e.g., 
+data validation), which make it broadly applicable.
 
 # Installation
 
@@ -85,19 +85,19 @@ using one of the following methods:
 ## Leiningen/Boot
 
 ```
-[com.kineticfire/control-flow "1.0.0"]
+[com.kineticfire/control-flow "1.1.0"]
 ```
 
 ## Clojure CLI/deps.edn
 
 ```
-com.kineticfire/control-flow {:mvn/version "1.0.0"}
+com.kineticfire/control-flow {:mvn/version "1.1.0"}
 ```
 
 ## Gradle
 
 ```
-implementation("com.kineticfire:control-flow:1.0.0")
+implementation("com.kineticfire:control-flow:1.1.0")
 ```
 
 ## Maven
@@ -130,11 +130,30 @@ Call a function from the *clojure-control-flow* library:
 ```
 
 # Documentation
-1. [control-flow.core](#control-flowcore)
+
+The *clojure-control-flow* library defines control flows mechanisms that thread a value through a list of forms and
+return a result, much like [->](https://clojuredocs.org/clojure.core/-%3E) macro.  Unlike the `->` macro, the mechanisms
+defined by this library provide an option to short-circuit (e.g., stop processing subsequent forms) the list of forms.
+
+Two categories of control flow mechanisms appear in the *clojure-control-flow* library:
+1. [Control Flow Mechanisms That Thread the Previous Result and Short-Circuit Based on a Function](#control-flow-mechanisms-that-thread-the-previous-result-and-short-circuit-based-on-a-function)
+1. [Control Flow Mechanisms That Thread the Original Value and Short-Circuit Based on the Form Returning a Boolean](#control-flow-mechanisms-that-thread-the-original-value-and-short-circuit-based-on-the-form-returning-a-boolean)
 
 
-## control-flow.core
+## Control Flow Mechanisms That Thread the Previous Result and Short-Circuit Based on a Function
 
+These macros thread the result of the previous form to the next form and accept a function that can short-circuit the 
+processing of the next forms.
+
+The `continue` macros continue to the next form if the short-circuit condition function returns `true` else stops.  The
+`stop` macros short-circuit if the condition function returns `true`.
+
+The macros with `mod` accept a short-circuit condition function that can also modify the data before passing it to the
+next form.
+
+Otherwise, the macros with `->`, `->>`, and `as->` operate like their counterparts in `clojure.core`.
+
+Macros in this group consist of:
 1. [continue->](#continue-)
 2. [continue->>](#continue--1)
 3. [continue-as->](#continue-as-)
@@ -747,6 +766,232 @@ called on the result from the evaluation of the last form.
                            {:stop false :data (update (assoc % :fn "cont") :z inc)}))) 
 ;;=> {:z 0}
 ```
+
+## Control Flow Mechanisms That Thread the Original Value and Short-Circuit Based on the Form Returning a Boolean
+
+These macros thread the original value to all forms and short-circuit based on the form returning a boolean value.
+
+The `continue` macros continue to the next form if the short-circuit condition function returns boolean `true` else 
+stops.  The `stop` macros continue if the function returns boolean `false`; note this is slightly different that the
+`stop->` macro in [Control Flow Mechanisms That Thread the Previous Result and Short-Circuit Based on a Function](#control-flow-mechanisms-that-thread-the-previous-result-and-short-circuit-based-on-a-function).
+
+Otherwise, the macros with `->`, `->>`, and `as->` operate like their counterparts in `clojure.core`.
+
+Macros in this group consist of:
+1. [continue-x->](#continue-x-)
+2. [continue-x->>](#continue-x--1)
+3. [continue-x-as->](#continue-x-as-)
+7. [stop-x->](#stop-x-)
+8. [stop-x->>](#stop-x--1)
+9. [stop-x-as->](#stop-x-as-)
+
+
+### continue-x->
+
+```clojure
+(continue-x-> x & forms)
+```
+
+A macro to thread first the original value only:  continue if the evaluation function returns boolean `true`.
+
+Threads the expression `x` through the forms `forms`. Inserts `x` as the second item in the first form, making a list
+of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
+then if the form returns boolean `true` continues to the next form by passing `x` (NOT the result of the form) as the
+second item in the next form until there are no forms, returning the result of the last form.  If a form returns
+anything but boolean `true`, then that value is returned and no more forms are evaluated.
+
+```clojure
+(def name "fred")
+(def users ["able", "baker", "charlie"])
+
+;; all valid
+(cf/continue-x-> name
+                 (validate-string (str "Invalid name: " name))
+                 (validate-unique-user-name users (str "User name exists: " name)))
+;;=> true
+
+(def name 1)
+
+;; fail on the 1st form
+(cf/continue-x-> name
+                 (validate-string (str "Invalid name: " name))
+                 (validate-unique-user-name users (str "User name exists: " name)))
+;;=> "Invalid name: 1"
+```
+
+### continue-x->>
+
+```clojure
+(continue-x->> x & forms)
+```
+
+A macro to thread last the original value only:  continue if the evaluation function returns boolean `true`.
+
+Threads the expression `x` through the forms `forms`. Inserts `x` as the last item in the first form, making a list
+of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
+then if the form returns boolean `true` continues to the next form by passing `x` (NOT the result of the form) as the
+last item in the next form until there are no forms, returning the result of the last form.  If a form returns
+anything but boolean `true`, then that value is returned and no more forms are evaluated.
+
+```clojure
+(def name "fred")
+(def users ["able", "baker", "charlie"])
+
+;; all valid
+(cf/continue-x->> name
+                  (validate-string (str "Invalid name: " name))
+                  (validate-unique-user-name users (str "User name exists: " name)))
+;;=> true
+
+(def name 1)
+
+;; fail on the 1st form
+(cf/continue-x->> name
+                  (validate-string (str "Invalid name: " name))
+                  (validate-unique-user-name users (str "User name exists: " name)))
+;;=> "Invalid name: 1"
+```
+
+
+### continue-x-as->
+
+```clojure
+(continue-x-as-> expr name & forms)
+```
+
+A macro to thread in an arbitrary position the original value only:  continue if the evaluation function returns
+boolean `true`.
+
+Threads the expression `expr` through the forms `forms`. Binds `name` to `expr` in the first form, making a list
+of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
+then applies the `expr` (NOT the output of the form) to the next form by binding `name` to `expr` and so on until no
+forms remain so long as each form returns boolean `true`.  If a form returns anything other than boolean `true`, then
+that result is returned and the evaluation of forms stops.
+
+```clojure
+(def name "fred")
+(def users ["able", "baker", "charlie"])
+
+;; all valid
+(cf/continue-x-> name x
+                 (validate-string x (str "Invalid name: " name))
+                 (validate-unique-user-name x users (str "User name exists: " name)))
+;;=> true
+
+(def name 1)
+
+;; fail on the 1st form
+(cf/continue-x-> name x
+                 (validate-string x (str "Invalid name: " name))
+                 (validate-unique-user-name x users (str "User name exists: " name)))
+;;=> "Invalid name: 1"
+```
+
+
+### stop-x->
+
+```clojure
+(stop-x-> x & forms)
+```
+
+A macro to thread first the original value only:  stop if the evaluation function returns anything other than boolean
+`false`.
+
+Threads the expression `x` through the forms `forms`. Inserts `x` as the second item in the first form, making a list
+of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
+then passes `x` (NOT the result of the form) to the next form and so on until there are no more forms, returning
+the result of the last form.  If a form returns anything except boolean `false`, then stops evaluating forms and
+returns that result.
+
+```clojure
+(def name "fred")
+(def users ["able", "baker", "charlie"])
+
+;; all valid
+(cf/stop-x-> name
+             (is-invalid-string (str "Invalid name: " name))
+             (is-non-unique-user-name users (str "User name exists: " name)))
+;;=> false
+
+(def name 1)
+
+;; fail on the 1st form
+(cf/stop-x-> name
+             (is-invalid-string (str "Invalid name: " name))
+             (is-non-unique-user-name users (str "User name exists: " name)))
+;;=> "Invalid name: 1"
+```
+
+
+### stop-x->>
+
+```clojure
+(stop-x->> x & forms)
+```
+
+A macro to thread last the original value only:  stop if the evaluation function returns anything other than boolean
+`false`.
+
+Threads the expression `x` through the forms `forms`. Inserts `x` as the last item in the first form, making a list
+of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
+then passes `x` (NOT the result of the form) to the next form and so on until there are no more forms, returning
+the result of the last form.  If a form returns anything except boolean `false`, then stops evaluating forms and
+returns that result.
+
+```clojure
+(def name "fred")
+(def users ["able", "baker", "charlie"])
+
+;; all valid
+(cf/stop-x->> name
+              (is-invalid-string (str "Invalid name: " name))
+              (is-non-unique-user-name users (str "User name exists: " name)))
+;;=> false
+
+(def name 1)
+
+;; fail on the 1st form
+(cf/stop-x->> name
+              (is-invalid-string (str "Invalid name: " name))
+              (is-non-unique-user-name users (str "User name exists: " name)))
+;;=> "Invalid name: 1"
+```
+
+
+### stop-x-as->
+
+```clojure
+(stop-x-as-> x & forms)
+```
+
+A macro to thread in an arbitrary position the original value only:  stop if the evaluation function returns anything
+other than boolean `false`.
+
+Threads the expression `expr` through the forms `forms`. Binds `name` to `expr` in the first form, making a list
+of it if it is not a list already.  If there are no more forms, then returns the result.  If there are more forms,
+then passes to those forms the original value `expr` until there are no forms or until a function returns anything
+other than boolean `false`.
+
+
+```clojure
+(def name "fred")
+(def users ["able", "baker", "charlie"])
+
+;; all valid
+(cf/stop-x-as-> name x
+                (is-invalid-string x (str "Invalid name: " name))
+                (is-non-unique-user-name x users (str "User name exists: " name)))
+;;=> false
+
+(def name 1)
+
+;; fail on the 1st form
+(cf/stop-x-as-> name x
+                (is-invalid-string x (str "Invalid name: " name))
+                (is-non-unique-user-name x users (str "User name exists: " name)))
+;;=> "Invalid name: 1"
+```
+
 
 # License
 The *clojure-control-flow* project is released under [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
